@@ -1,0 +1,41 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Raleway:ital,wght@0,100;0,200;0,300;1,100;1,200;1,400&display=swap");
+:root {
+  --body-font: "Raleway", sans-serif;
+  --header-height: 3.5rem;
+
+  --font-bold: 700;
+
+  --details-color: #4c010c;
+  --yellow-color: rgba(255, 255, 166, 1);
+
+  --white-color: rgba(255, 255, 255, 1);
+  --gray-50: rgba(244, 246, 247, 1);
+  --gray-100: rgba(227, 230, 234, 1);
+  --gray-200: rgba(219, 224, 233, 1);
+  --gray-300: rgba(174, 192, 203, 1);
+  --gray-500: rgba(98, 130, 149, 1);
+  --gray-600: rgba(77, 105, 124, 1);
+  --gray-700: rgba(69, 77, 89, 1);
+  --gray-900: rgba(55, 59, 66, 1);
+  --green-950: rgba(0, 73, 85, 1);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: var(--body-font);
+  font-size: var(--normal-font-size);
+  background-color: var(--body-color);
+}
+
+ul {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+}
