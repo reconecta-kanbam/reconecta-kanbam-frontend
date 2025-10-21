@@ -20,13 +20,11 @@ const AuthPage: React.FC = () => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Login:', { email: formData.email, password: formData.password });
-    // Aqui você fará a integração com a API
   };
 
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Signup:', formData);
-    // Aqui você fará a integração com a API
   };
 
   return (
@@ -35,7 +33,7 @@ const AuthPage: React.FC = () => {
         <div className="auth-left-content">
           <div className="auth-brand">
             <h1 className="brand-name">
-              Reconecta <br/> kanbam <span className="brand-dot">●</span>
+              Reconecta <br/> kanban <span className="brand-dot">●</span>
             </h1>
             <p className="brand-tagline">
               Gerenciamento de Ocorrências e Projetos
@@ -81,12 +79,14 @@ const AuthPage: React.FC = () => {
           <button
             className={`auth-tab ${showLogin ? 'active' : ''}`}
             onClick={() => setShowLogin(true)}
+            type="button"
           >
             Login
           </button>
           <button
             className={`auth-tab ${!showLogin ? 'active' : ''}`}
             onClick={() => setShowLogin(false)}
+            type="button"
           >
             Cadastro
           </button>
@@ -139,9 +139,13 @@ const AuthPage: React.FC = () => {
                   <input type="checkbox" />
                   <span>Lembrar de mim</span>
                 </label>
-                <a href="#" className="form-link">
+                <button
+                  type="button"
+                  className="form-link"
+                  onClick={() => alert('Recuperação de senha em breve')}
+                >
                   Esqueceu a senha?
-                </a>
+                </button>
               </div>
 
               <button type="submit" className="form-submit">
@@ -229,8 +233,21 @@ const AuthPage: React.FC = () => {
                   <input type="checkbox" required />
                   <span>
                     Eu concordo com os{' '}
-                    <a href="#">Termos de uso</a> e{' '}
-                    <a href="#">Política de privacidade</a>
+                    <button
+                      type="button"
+                      className="form-link-inline"
+                      onClick={() => alert('Termos de uso')}
+                    >
+                      Termos de uso
+                    </button>{' '}
+                    e{' '}
+                    <button
+                      type="button"
+                      className="form-link-inline"
+                      onClick={() => alert('Política de privacidade')}
+                    >
+                      Política de privacidade
+                    </button>
                   </span>
                 </label>
               </div>
@@ -245,9 +262,21 @@ const AuthPage: React.FC = () => {
 
         <div className="auth-footer">
           <div className="footer-links">
-            <a href="#" className="footer-link">Termos de uso</a>
+            <button
+              type="button"
+              className="footer-link"
+              onClick={() => alert('Termos de uso')}
+            >
+              Termos de uso
+            </button>
             <span className="footer-separator">|</span>
-            <a href="#" className="footer-link">Política de privacidade</a>
+            <button
+              type="button"
+              className="footer-link"
+              onClick={() => alert('Política de privacidade')}
+            >
+              Política de privacidade
+            </button>
           </div>
         </div>
       </div>

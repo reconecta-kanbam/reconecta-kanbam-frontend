@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 
 // 1 - Configuração de router
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+// import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 /* ============ Pages =========== */
 import KanbanBoard from './components/kanbanBoard/KanbanBoard';
