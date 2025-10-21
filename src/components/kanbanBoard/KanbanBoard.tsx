@@ -7,11 +7,19 @@ import {
 } from "@hello-pangea/dnd";
 import { initialColumns, Column, Card } from "./kanbanData";
 import { EditCardDialog } from "./EditCardDialog";
+import { NewCardDialog } from "./NewCardDialog";
+import { WorkflowConfigDialog } from "./WorkflowConfigDialog";
 
 const KanbanBoard: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [newCardOpen, setNewCardOpen] = useState<string | null>(null);
+  const [workflowDialogOpen, setWorkflowDialogOpen] = useState(false);
+
+  const handleWorkflowSave = (data: any) => {
+    console.log("Workflow salvo:", data);
+  };
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -63,6 +71,21 @@ const KanbanBoard: React.FC = () => {
 
   return (
     <>
+      <div className="flex justify-end px-6">
+        <button
+          onClick={() => setWorkflowDialogOpen(true)}
+          className="mb-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+        >
+          Configurar Workflow
+        </button>
+      </div>
+
+      <WorkflowConfigDialog
+        open={workflowDialogOpen}
+        onOpenChange={setWorkflowDialogOpen}
+        onSave={handleWorkflowSave}
+      />
+
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex gap-6 p-6 bg-gray-50 min-h-screen">
           {columns.map((col) => (
@@ -94,6 +117,12 @@ const KanbanBoard: React.FC = () => {
                     </Draggable>
                   ))}
                   {provided.placeholder}
+                  <button
+                    onClick={() => setNewCardOpen(col.id)}
+                    className="w-full py-2 mt-2 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                  >
+                    + Novo Card
+                  </button>
                 </div>
               )}
             </Droppable>
@@ -107,6 +136,24 @@ const KanbanBoard: React.FC = () => {
           onOpenChange={setDialogOpen}
           initialTitle={selectedCard.title}
           onSave={handleSave}
+        />
+      )}
+      {newCardOpen && (
+        <NewCardDialog
+          open={!!newCardOpen}
+          onOpenChange={() => setNewCardOpen(null)}
+          onSave={(title) => {
+            setColumns((prev) =>
+              prev.map((col) =>
+                col.id === newCardOpen
+                  ? {
+                      ...col,
+                      cards: [...col.cards, { id: crypto.randomUUID(), title }],
+                    }
+                  : col
+              )
+            );
+          }}
         />
       )}
     </>
