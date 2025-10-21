@@ -55,6 +55,8 @@ export function EditCardDialog({
               Salvar
             </button>
           </div>
+
+          <link rel="stylesheet" href="../login/AuthPage.tsx" />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

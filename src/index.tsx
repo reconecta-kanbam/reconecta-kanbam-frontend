@@ -1,15 +1,40 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App'
 
-/* ============ Styles Global - SCSS/Tailwind =========== */
-import './styles/scss/App.css';
+// 1 - Configuração de router
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+/* ============ Pages =========== */
+import KanbanBoard from './components/kanbanBoard/KanbanBoard';
+import AuthPage from './components/login/AuthPage';
+
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+    // 3 - Página de Err,
+    children: [
+      {
+        path: "/",
+        element: <AuthPage />,
+      },
+      {
+        path: "kanbanBoard",
+        element: <KanbanBoard />,
+      },
+      //  // 7 - navigate para páginas não existentes
+      // {
+      //   path: "oldcontact",
+      //   element: <Navigate to="/" />,
+      // },
+    ],
+  },
+]);
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>,
+)

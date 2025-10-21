@@ -1,13 +1,25 @@
-import React from "react";
-import KanbanBoard from "./components/kanbanBoard/KanbanBoard";
+import React from 'react';
+ 
+/* ============ 2 - Reaproveitamento  de estrutura =========== */
+import { Outlet, useLocation } from 'react-router-dom';
 
-function App() {
-  return (
-    <div style={{ padding: "20px" }}>
-      <h1>Reconecta Kanban</h1>
-      <KanbanBoard />
-    </div>
-  );
-}
+/* ============ Styles Global - SCSS/Tailwind =========== */
+import './styles/scss/App.css';
+
+// /* ============ Header e Footer - Global =========== */
+import Header from './components/header/header';
+import Footer from './components/footer/footer';
+
+const App: React.FC = () => {
+    const location = useLocation();
+
+    return (
+        <>
+            <Header />
+                <Outlet />
+                {location.pathname !== '/login' && <Footer />}
+        </>
+    );
+};
 
 export default App;
