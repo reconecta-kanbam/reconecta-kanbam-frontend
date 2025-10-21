@@ -1,0 +1,71 @@
+@import './variables';
+
+/*=============== Container ===============*/
+.container {
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/*========== Breakpoints ==========*/
+:root {
+    --screen-lg: 992px;
+    --screen-md: 768px;
+    --screen-sm: 576px;
+    --screen-xs: 350px;
+}
+
+/*=============== BREAKPOINTS ===============*/
+/* For small devices */
+@media screen and (max-width: var(--screen-xs)) {
+    /* $big-font-size: 2.25rem; */
+}
+
+@media (min-width: var(--screen-sm)) {
+  .container {
+    max-width: 540px;
+  }
+}
+
+@media (min-width: var(--screen-md)) {
+  .container {
+    max-width: 720px;
+  }
+    /* // body {
+    //     margin: 0 0 variables.$header-height 0;
+    // } */
+
+    .section {
+        padding: 2rem 0 4rem;
+    }
+
+    .section__subtitle {
+        margin-bottom: var(--mb-3);
+    }
+}
+
+/* For large devices */
+@media (min-width: var(screen-lg)) {
+  .container {
+    max-width: 960px;
+    /* // margin-left: variables.$mb-1-5;
+    // margin-right: variables.$mb-1-5; */
+  }
+
+  .button {
+      padding: 1rem 1.75rem;
+  }
+
+  .button__icon {
+      width: 22px;
+      height: 22px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1247px;
+  }
+}

@@ -58,7 +58,7 @@ const KanbanBoard: React.FC = () => {
                 }}
               >
                 <h3>{col.title}</h3>
-                {col.cards.map((card, index) => (
+                {col.cards.map((card: Card, index) => (
                   <Draggable key={card.id} draggableId={card.id} index={index}>
                     {(provided) => (
                       <div

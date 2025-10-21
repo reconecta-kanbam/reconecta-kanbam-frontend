@@ -1,0 +1,17 @@
+/*=============== Imports Scss ===============*/
+
+/*=============== Base ===============*/
+@import './base/variables';
+@import './base/reset';
+@import './base/grid';
+@import './base/font';
+
+/*=============== Global ===============*/
+@import './global/header';
+@import './global/footer';
+
+/*=============== Pages ===============*/
+@import './pages/kanbanBoard';
+
+
+
