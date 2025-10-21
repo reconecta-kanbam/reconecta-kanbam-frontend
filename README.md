@@ -46,5 +46,5 @@ You can learn more in the [Create React App documentation](https://facebook.gith
 
 To learn React, check out the [React documentation](https://reactjs.org/).
 =======
-# reconecta-kanbam-frontend
+# reconecta-kanban-frontend
 >>>>>>> dc69837c54cdcf09cf9bcd635174d3d2759360d0

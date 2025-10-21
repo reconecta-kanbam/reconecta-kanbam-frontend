@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = () => {
           <ul className="nav">
             <li className="nav__menu__list__item">
               <Link className="nav__menu__list__item__link" to="/KanbanBoard">
-                kanbam
+                kanban
               </Link>
             </li>
 
