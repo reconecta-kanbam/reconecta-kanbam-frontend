@@ -6,9 +6,12 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { initialColumns, Column, Card } from "./kanbanData";
+import { EditCardDialog } from "./EditCardDialog";
 
 const KanbanBoard: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>(initialColumns);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
@@ -25,11 +28,9 @@ const KanbanBoard: React.FC = () => {
 
     const movedCard = sourceCol.cards[source.index];
 
-    // Remover do source
     const newSourceCards = Array.from(sourceCol.cards);
     newSourceCards.splice(source.index, 1);
 
-    // Adicionar no destino
     const newDestCards = Array.from(destCol.cards);
     newDestCards.splice(destination.index, 0, movedCard);
 
@@ -38,6 +39,26 @@ const KanbanBoard: React.FC = () => {
     newColumns[destColIndex] = { ...destCol, cards: newDestCards };
 
     setColumns(newColumns);
+  };
+
+  const handleEdit = (colId: string, cardId: string) => {
+    const col = columns.find((c) => c.id === colId);
+    const card = col?.cards.find((card) => card.id === cardId);
+    if (card) {
+      setSelectedCard(card);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleSave = (newTitle: string) => {
+    setColumns((prev) =>
+      prev.map((col) => ({
+        ...col,
+        cards: col.cards.map((card) =>
+          card.id === selectedCard?.id ? { ...card, title: newTitle } : card
+        ),
+      }))
+    );
   };
 
   return (
@@ -58,7 +79,7 @@ const KanbanBoard: React.FC = () => {
                 }}
               >
                 <h3>{col.title}</h3>
-                {col.cards.map((card: Card, index) => (
+                {col.cards.map((card, index) => (
                   <Draggable key={card.id} draggableId={card.id} index={index}>
                     {(provided) => (
                       <div
