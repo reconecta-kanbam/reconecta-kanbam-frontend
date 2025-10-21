@@ -8,8 +8,10 @@ const Footer: React.FC<FooterProps> = () => {
   return (
     <>
       <footer className="footer">
-        footer
-      </footer>
+            <div className="container">
+              <p>Reconecta Kanbam – 2025 © Todos os direitos reservados</p>
+            </div>
+        </footer>
     </>
   );
 };

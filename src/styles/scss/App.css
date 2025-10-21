@@ -16,6 +16,11 @@
 
 /*=============== Pages ===============*/
 @import "./pages/kanbanBoard";
+@import "./pages/authPages";
+
+
+/* Import Boxicons */
+@import url('https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css');
 
 @import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Raleway:ital,wght@0,100;0,200;0,300;1,100;1,200;1,400&display=swap");
 :root {
