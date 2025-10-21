@@ -62,50 +62,54 @@ const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div style={{ display: "flex", gap: "20px" }}>
-        {columns.map((col) => (
-          <Droppable droppableId={col.id} key={col.id}>
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                style={{
-                  background: "#f4f4f4",
-                  padding: "10px",
-                  width: "250px",
-                  borderRadius: "5px",
-                  minHeight: "200px",
-                }}
-              >
-                <h3>{col.title}</h3>
-                {col.cards.map((card, index) => (
-                  <Draggable key={card.id} draggableId={card.id} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        style={{
-                          padding: "10px",
-                          margin: "5px 0",
-                          background: "white",
-                          borderRadius: "3px",
-                          ...provided.draggableProps.style,
-                        }}
-                      >
-                        {card.title}
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        ))}
-      </div>
-    </DragDropContext>
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex gap-6 p-6 bg-gray-50 min-h-screen">
+          {columns.map((col) => (
+            <Droppable droppableId={col.id} key={col.id}>
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="bg-white rounded-xl p-4 shadow-md w-64"
+                >
+                  <h3 className="text-lg font-semibold mb-3">{col.title}</h3>
+                  {col.cards.map((card, index) => (
+                    <Draggable
+                      key={card.id}
+                      draggableId={card.id}
+                      index={index}
+                    >
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          onClick={() => handleEdit(col.id, card.id)}
+                          className="bg-gray-100 hover:bg-gray-200 rounded-md p-3 mb-2 cursor-pointer transition"
+                        >
+                          {card.title}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          ))}
+        </div>
+      </DragDropContext>
+
+      {selectedCard && (
+        <EditCardDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          initialTitle={selectedCard.title}
+          onSave={handleSave}
+        />
+      )}
+    </>
   );
 };
 
