@@ -7,7 +7,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 
 /* ============ Pages =========== */
 import KanbanBoard from './components/kanbanBoard/KanbanBoard';
-import AuthPage from './components/login/AuthPage';
+import AuthPg from './components/login/AuthPg';
 
 
 const router = createBrowserRouter([
@@ -18,7 +18,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <AuthPage />,
+        element: <AuthPg />,
       },
       {
         path: "kanbanBoard",
