@@ -1,4 +1,3 @@
-// src/types/usuario.ts
 export type UserRole = 'ADMIN' | 'GESTOR' | 'COLABORADOR';
 
 export interface Setor {

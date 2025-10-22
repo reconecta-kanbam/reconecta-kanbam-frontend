@@ -2,13 +2,14 @@ import api from '../api';
 import ENDPOINTS from '../endpoints';
 import { LoginRequest, RegisterRequest, AuthResponse } from '../types/usuario';
 
-export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
+export const loginUser = async (data: LoginRequest, rememberMe: boolean = true): Promise<AuthResponse> => {
   const payload = {
     email: data.email,
     senha: data.password,
   };
   const response = await api.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN, payload);
-  localStorage.setItem('access_token', response.data.token);
+  const storage = rememberMe ? localStorage : sessionStorage;
+  storage.setItem('access_token', response.data.token);
   return response.data;
 };
 
@@ -31,9 +32,10 @@ export const recoverPassword = async (email: string): Promise<void> => {
 
 export const logoutUser = () => {
   localStorage.removeItem('access_token');
+  sessionStorage.removeItem('access_token');
   window.location.href = '/login';
 };
 
 export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem('access_token');
+  return !!localStorage.getItem('access_token') || !!sessionStorage.getItem('access_token');
 };

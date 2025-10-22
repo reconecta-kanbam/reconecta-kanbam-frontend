@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { loginUser, registerUser, recoverPassword } from '../../api/services/usuario';
 import { getSectors } from '../../api/services/sectors';
 import { Setor, UserRole } from '../../api/types/usuario';
+import { useAuth } from '../../context/AuthContext';
 
-const AuthPage: React.FC = () => {
+const AuthPg: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, updateAuth } = useAuth(); // Adicione updateAuth
 
   const [showLogin, setShowLogin] = useState(true);
   const [sectors, setSectors] = useState<Setor[]>([]);
@@ -14,6 +16,7 @@ const AuthPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: boolean; password?: boolean }>({});
+  const [rememberMe, setRememberMe] = useState(true);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -24,7 +27,12 @@ const AuthPage: React.FC = () => {
     setorId: 0,
   });
 
-  // Carregar setores ao montar o componente
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/kanbanBoard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
   useEffect(() => {
     const loadSectors = async () => {
       setLoadingSectors(true);
@@ -62,16 +70,17 @@ const AuthPage: React.FC = () => {
       await loginUser({
         email: formData.email,
         password: formData.password,
-      });
+      }, rememberMe);
+
+      updateAuth(); // Atualiza o estado de autenticação imediatamente
 
       alert('Login realizado com sucesso!');
-      navigate('/KanbanBoard'); // REDIRECIONA PARA KANBAN BOARD
+      navigate('/kanbanBoard');
     } catch (err: any) {
       const message = err.response?.data?.message || 'Credenciais inválidas. Verifique e-mail e senha.';
       setError(message);
-      alert(message); // ALERTA
+      alert(message);
 
-      // BORDA VERMELHA nos campos
       setFieldErrors({
         email: true,
         password: true,
@@ -112,6 +121,8 @@ const AuthPage: React.FC = () => {
         role: formData.role,
         setorId: formData.setorId,
       });
+
+      updateAuth(); // Atualiza após registro, caso logue automaticamente
 
       alert('Cadastro realizado com sucesso! Faça login.');
       setShowLogin(true);
@@ -304,7 +315,12 @@ const AuthPage: React.FC = () => {
 
               <div className="form-options">
                 <label className="form-checkbox">
-                  <input type="checkbox" disabled={loading} />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={loading}
+                  />
                   <span>Lembrar de mim</span>
                 </label>
                 <button type="button" className="form-link" onClick={handleRecoverPassword} disabled={loading}>
@@ -483,4 +499,4 @@ const AuthPage: React.FC = () => {
   );
 };
 
-export default AuthPage;
+export default AuthPg;
