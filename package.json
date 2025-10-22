@@ -30,6 +30,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "proxy": "https://sistema-de-ocorrencias-production.up.railway.app",
   "eslintConfig": {
     "extends": [
       "react-app",

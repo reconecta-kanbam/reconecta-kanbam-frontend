@@ -1,30 +1,155 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { loginUser, registerUser, recoverPassword } from '../../api/services/usuario';
+import { getSectors } from '../../api/services/sectors';
+import { Setor, UserRole } from '../../api/types/usuario';
 
 const AuthPage: React.FC = () => {
+  const navigate = useNavigate();
+
   const [showLogin, setShowLogin] = useState(true);
+  const [sectors, setSectors] = useState<Setor[]>([]);
+  const [loadingSectors, setLoadingSectors] = useState(true);
+  const [sectorsError, setSectorsError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ email?: boolean; password?: boolean }>({});
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
     confirmPassword: '',
+    role: 'COLABORADOR' as UserRole,
+    setorId: 0,
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Carregar setores ao montar o componente
+  useEffect(() => {
+    const loadSectors = async () => {
+      setLoadingSectors(true);
+      setSectorsError('');
+      try {
+        const data = await getSectors();
+        setSectors(data);
+      } catch (err: any) {
+        console.error('Erro ao carregar setores:', err);
+        setSectorsError('Erro ao carregar setores. Tente recarregar a página.');
+      } finally {
+        setLoadingSectors(false);
+      }
+    };
+    loadSectors();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'setorId' ? parseInt(value, 10) || 0 : value
     }));
+    setError('');
+    setFieldErrors(prev => ({ ...prev, [name]: false }));
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { email: formData.email, password: formData.password });
+    setLoading(true);
+    setError('');
+    setFieldErrors({});
+
+    try {
+      await loginUser({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      alert('Login realizado com sucesso!');
+      navigate('/KanbanBoard'); // REDIRECIONA PARA KANBAN BOARD
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Credenciais inválidas. Verifique e-mail e senha.';
+      setError(message);
+      alert(message); // ALERTA
+
+      // BORDA VERMELHA nos campos
+      setFieldErrors({
+        email: true,
+        password: true,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Signup:', formData);
+    setLoading(true);
+    setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('As senhas não coincidem');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.setorId === 0) {
+      setError('Por favor, selecione um setor');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await registerUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        setorId: formData.setorId,
+      });
+
+      alert('Cadastro realizado com sucesso! Faça login.');
+      setShowLogin(true);
+      setFormData(prev => ({
+        ...prev,
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        setorId: 0,
+      }));
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erro ao criar conta. Tente novamente.';
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoverPassword = async () => {
+    if (!formData.email) {
+      setError('Por favor, insira seu e-mail');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await recoverPassword(formData.email);
+      alert('Instruções de recuperação enviadas para seu e-mail!');
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erro ao recuperar senha.';
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,17 +158,15 @@ const AuthPage: React.FC = () => {
         <div className="auth-left-content">
           <div className="auth-brand">
             <h1 className="brand-name">
-              Reconecta <br/> kanban <span className="brand-dot">●</span>
+              Reconecta <br /> kanban <span className="brand-dot">●</span>
             </h1>
-            <p className="brand-tagline">
-              Gerenciamento de Ocorrências e Projetos
-            </p>
+            <p className="brand-tagline">Gerenciamento de Ocorrências e Projetos</p>
           </div>
 
           <div className="auth-features">
             <div className="feature-item">
               <div className="feature-icon">
-                <i className='bx bx-task'></i>
+                <i className="bx bx-task"></i>
               </div>
               <div className="feature-text">
                 <h3>Gestão de Ocorrências</h3>
@@ -53,7 +176,7 @@ const AuthPage: React.FC = () => {
 
             <div className="feature-item">
               <div className="feature-icon">
-                <i className='bx bx-git-branch'></i>
+                <i className="bx bx-git-branch"></i>
               </div>
               <div className="feature-text">
                 <h3>Fluxos Configuráveis</h3>
@@ -63,7 +186,7 @@ const AuthPage: React.FC = () => {
 
             <div className="feature-item">
               <div className="feature-icon">
-                <i className='bx bx-group'></i>
+                <i className="bx bx-group"></i>
               </div>
               <div className="feature-text">
                 <h3>Gestão de Projetos</h3>
@@ -78,34 +201,70 @@ const AuthPage: React.FC = () => {
         <div className="auth-tabs">
           <button
             className={`auth-tab ${showLogin ? 'active' : ''}`}
-            onClick={() => setShowLogin(true)}
+            onClick={() => {
+              setShowLogin(true);
+              setError('');
+              setFieldErrors({});
+            }}
             type="button"
           >
             Login
           </button>
           <button
             className={`auth-tab ${!showLogin ? 'active' : ''}`}
-            onClick={() => setShowLogin(false)}
+            onClick={() => {
+              setShowLogin(false);
+              setError('');
+            }}
             type="button"
           >
             Cadastro
           </button>
         </div>
 
+        {error && (
+          <div
+            style={{
+              padding: '12px',
+              margin: '16px 0',
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '8px',
+              color: '#c33',
+              fontSize: '14px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {sectorsError && !showLogin && (
+          <div
+            style={{
+              padding: '12px',
+              margin: '16px 0',
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '8px',
+              color: '#c33',
+              fontSize: '14px',
+            }}
+          >
+            {sectorsError}
+          </div>
+        )}
+
         {showLogin ? (
           <div className="auth-form-container">
             <div className="auth-form-header">
               <h2 className="form-title">Bem-vindo de volta!</h2>
-              <p className="form-subtitle">
-                Entre com suas credenciais para acessar o sistema
-              </p>
+              <p className="form-subtitle">Entre com suas credenciais para acessar o sistema</p>
             </div>
 
             <form className="auth-form" onSubmit={handleLoginSubmit}>
               <div className="form-group">
                 <label className="form-label">
-                  <i className='bx bx-envelope'></i>
-                  E-mail
+                  <i className="bx bx-envelope"></i> E-mail
                 </label>
                 <input
                   type="email"
@@ -115,13 +274,17 @@ const AuthPage: React.FC = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
+                  disabled={loading}
+                  style={{
+                    borderColor: fieldErrors.email ? '#ef4444' : '',
+                    boxShadow: fieldErrors.email ? '0 0 0 1px #ef4444' : '',
+                  }}
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">
-                  <i className='bx bx-lock-alt'></i>
-                  Senha
+                  <i className="bx bx-lock-alt"></i> Senha
                 </label>
                 <input
                   type="password"
@@ -131,26 +294,27 @@ const AuthPage: React.FC = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
+                  disabled={loading}
+                  style={{
+                    borderColor: fieldErrors.password ? '#ef4444' : '',
+                    boxShadow: fieldErrors.password ? '0 0 0 1px #ef4444' : '',
+                  }}
                 />
               </div>
 
               <div className="form-options">
                 <label className="form-checkbox">
-                  <input type="checkbox" />
+                  <input type="checkbox" disabled={loading} />
                   <span>Lembrar de mim</span>
                 </label>
-                <button
-                  type="button"
-                  className="form-link"
-                  onClick={() => alert('Recuperação de senha em breve')}
-                >
+                <button type="button" className="form-link" onClick={handleRecoverPassword} disabled={loading}>
                   Esqueceu a senha?
                 </button>
               </div>
 
-              <button type="submit" className="form-submit">
-                <i className='bx bx-log-in'></i>
-                Entrar
+              <button type="submit" className="form-submit" disabled={loading}>
+                <i className="bx bx-log-in"></i>
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
           </div>
@@ -158,16 +322,13 @@ const AuthPage: React.FC = () => {
           <div className="auth-form-container">
             <div className="auth-form-header">
               <h2 className="form-title">Criar Nova Conta</h2>
-              <p className="form-subtitle">
-                Preencha os dados para começar a usar o sistema
-              </p>
+              <p className="form-subtitle">Preencha os dados para começar a usar o sistema</p>
             </div>
 
             <form className="auth-form" onSubmit={handleSignupSubmit}>
               <div className="form-group">
                 <label className="form-label">
-                  <i className='bx bx-user'></i>
-                  Nome Completo
+                  <i className="bx bx-user"></i> Nome Completo
                 </label>
                 <input
                   type="text"
@@ -177,13 +338,13 @@ const AuthPage: React.FC = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
+                  disabled={loading}
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">
-                  <i className='bx bx-envelope'></i>
-                  E-mail
+                  <i className="bx bx-envelope"></i> E-mail
                 </label>
                 <input
                   type="email"
@@ -193,13 +354,13 @@ const AuthPage: React.FC = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
+                  disabled={loading}
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">
-                  <i className='bx bx-lock-alt'></i>
-                  Senha
+                  <i className="bx bx-lock-alt"></i> Senha
                 </label>
                 <input
                   type="password"
@@ -209,13 +370,14 @@ const AuthPage: React.FC = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
+                  disabled={loading}
+                  minLength={6}
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">
-                  <i className='bx bx-lock-alt'></i>
-                  Confirmar Senha
+                  <i className="bx bx-lock-alt"></i> Confirmar Senha
                 </label>
                 <input
                   type="password"
@@ -225,18 +387,62 @@ const AuthPage: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   required
+                  disabled={loading}
+                  minLength={6}
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  <i className="bx bx-user-check"></i> Perfil
+                </label>
+                <select
+                  name="role"
+                  className="form-input"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  required
+                  disabled={loading}
+                >
+                  <option value="COLABORADOR">Colaborador</option>
+                  <option value="GESTOR">Gestor</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  <i className="bx bx-building"></i> Setor
+                </label>
+                <select
+                  name="setorId"
+                  className="form-input"
+                  value={formData.setorId}
+                  onChange={handleInputChange}
+                  required
+                  disabled={loading || loadingSectors}
+                >
+                  <option value="0">
+                    {loadingSectors ? 'Carregando setores...' : 'Selecione um setor'}
+                  </option>
+                  {sectors.map(sector => (
+                    <option key={sector.id} value={sector.id}>
+                      {sector.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-terms">
                 <label className="form-checkbox">
-                  <input type="checkbox" required />
+                  <input type="checkbox" required disabled={loading} />
                   <span>
                     Eu concordo com os{' '}
                     <button
                       type="button"
                       className="form-link-inline"
                       onClick={() => alert('Termos de uso')}
+                      disabled={loading}
                     >
                       Termos de uso
                     </button>{' '}
@@ -245,6 +451,7 @@ const AuthPage: React.FC = () => {
                       type="button"
                       className="form-link-inline"
                       onClick={() => alert('Política de privacidade')}
+                      disabled={loading}
                     >
                       Política de privacidade
                     </button>
@@ -252,9 +459,9 @@ const AuthPage: React.FC = () => {
                 </label>
               </div>
 
-              <button type="submit" className="form-submit">
-                <i className='bx bx-user-plus'></i>
-                Criar Conta
+              <button type="submit" className="form-submit" disabled={loading || loadingSectors}>
+                <i className="bx bx-user-plus"></i>
+                {loading ? 'Criando conta...' : 'Criar Conta'}
               </button>
             </form>
           </div>
@@ -262,19 +469,11 @@ const AuthPage: React.FC = () => {
 
         <div className="auth-footer">
           <div className="footer-links">
-            <button
-              type="button"
-              className="footer-link"
-              onClick={() => alert('Termos de uso')}
-            >
+            <button type="button" className="footer-link" onClick={() => alert('Termos de uso')}>
               Termos de uso
             </button>
             <span className="footer-separator">|</span>
-            <button
-              type="button"
-              className="footer-link"
-              onClick={() => alert('Política de privacidade')}
-            >
+            <button type="button" className="footer-link" onClick={() => alert('Política de privacidade')}>
               Política de privacidade
             </button>
           </div>
