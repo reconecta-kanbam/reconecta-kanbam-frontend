@@ -18,7 +18,16 @@ export interface RegisterRequest {
   setorId: number;
 }
 
+// Interface atualizada para aceitar diferentes formatos de resposta
 export interface AuthResponse {
-  token: string;
-  user?: any;
+  token?: string;
+  access_token?: string;
+  accessToken?: string;
+  user?: {
+    id: number;
+    nome: string;
+    email: string;
+    perfil: UserRole;
+    setorId: number;
+  };
 }
