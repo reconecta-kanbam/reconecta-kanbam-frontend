@@ -10,6 +10,8 @@ import {
 import { EditCardDialog } from "./dialogs/EditCardDialog";
 import { WorkflowConfigDialog } from "./dialogs/WorkflowConfigDialog";
 import { AddCardDialog } from "./dialogs/AddCardDialog";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { TaskDetailDialog } from "./dialogs/TaskDetailDialog";
 
 interface Card {
   id: string;
@@ -23,13 +25,15 @@ interface Column {
 }
 
 const KanbanBoard: React.FC = () => {
-  const [columns, setColumns] = useState<Column[]>([]);
+  // const [columns, setColumns] = useState<Column[]>([]);
+  const [columns, setColumns] = useLocalStorage<Column[]>("kanban-columns", []);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [workflowDialogOpen, setWorkflowDialogOpen] = useState(false);
   const [workflowData, setWorkflowData] = useState<any>(null);
   const [addCardOpen, setAddCardOpen] = useState(false);
   const [selectedColId, setSelectedColId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Gera colunas a partir do workflow
   const generateColumnsFromWorkflow = (workflow: any): Column[] => {
@@ -183,7 +187,10 @@ const KanbanBoard: React.FC = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            onClick={() => handleEdit(col.id, card.id)}
+                            onClick={() => {
+                              handleEdit(col.id, card.id);
+                              setDetailOpen(true);
+                            }}
                             className="bg-gray-100 hover:bg-gray-200 rounded-md p-3 mb-2 cursor-pointer transition"
                           >
                             {card.title}
@@ -228,6 +235,14 @@ const KanbanBoard: React.FC = () => {
         onOpenChange={setAddCardOpen}
         onSave={handleSaveNewCard}
       />
+
+      {selectedCard && (
+        <TaskDetailDialog
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          title={selectedCard.title}
+        />
+      )}
     </>
   );
 };
