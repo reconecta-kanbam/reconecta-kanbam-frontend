@@ -1,28 +1,69 @@
-import { useState } from "react";
+"use client";
 
-// POST /occurrences → cria ocorrência.
-// Slack será chamado pelo backend automaticamente.
+import { useEffect, useState } from "react";
+import {
+  createOcorrencia,
+  listOcorrencias,
+  deleteOcorrencia,
+} from "../../api/services/ocorrencias";
+import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
 
-interface Occurrence {
+interface Ocorrencia {
   id: string;
-  title: string;
-  description: string;
-  priority: "baixa" | "média" | "alta";
+  titulo: string;
+  descricao: string;
+  prioridade: "baixa" | "média" | "alta";
 }
 
 export default function Occurrences() {
-  const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
+  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [form, setForm] = useState({
-    title: "",
-    description: "",
-    priority: "média" as "baixa" | "média" | "alta",
+    titulo: "",
+    descricao: "",
+    prioridade: "média" as "baixa" | "média" | "alta",
   });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🔹 Buscar ocorrências existentes
+  useEffect(() => {
+    const loadOcorrencias = async () => {
+      try {
+        const data = await listOcorrencias();
+        setOcorrencias(data);
+      } catch (err) {
+        console.error("Erro ao buscar ocorrências", err);
+      }
+    };
+    loadOcorrencias();
+  }, []);
+
+  // 🔹 Criar nova ocorrência
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newItem = { ...form, id: crypto.randomUUID() };
-    setOccurrences((prev) => [...prev, newItem]);
-    setForm({ title: "", description: "", priority: "média" });
+    try {
+      const nova = await createOcorrencia(form);
+      setOcorrencias((prev) => [...prev, nova]);
+      setForm({ titulo: "", descricao: "", prioridade: "média" });
+    } catch (err) {
+      console.error("Erro ao criar ocorrência", err);
+    }
+  };
+
+  // 🔹 Deletar ocorrência com modal
+  const handleDeleteClick = (id: string) => {
+    setSelectedId(id);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedId) return;
+    try {
+      await deleteOcorrencia(selectedId);
+      setOcorrencias((prev) => prev.filter((o) => o.id !== selectedId));
+    } catch (err) {
+      console.error("Erro ao excluir ocorrência", err);
+    }
   };
 
   return (
@@ -37,8 +78,8 @@ export default function Occurrences() {
           <label className="block font-medium text-gray-700">Título</label>
           <input
             className="w-full border p-2 rounded-md mt-1"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            value={form.titulo}
+            onChange={(e) => setForm({ ...form, titulo: e.target.value })}
             required
           />
         </div>
@@ -47,8 +88,8 @@ export default function Occurrences() {
           <textarea
             className="w-full border p-2 rounded-md mt-1"
             rows={3}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            value={form.descricao}
+            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
             required
           />
         </div>
@@ -56,11 +97,11 @@ export default function Occurrences() {
           <label className="block font-medium text-gray-700">Prioridade</label>
           <select
             className="border p-2 rounded-md mt-1"
-            value={form.priority}
+            value={form.prioridade}
             onChange={(e) =>
               setForm({
                 ...form,
-                priority: e.target.value as "baixa" | "média" | "alta",
+                prioridade: e.target.value as "baixa" | "média" | "alta",
               })
             }
           >
@@ -78,25 +119,31 @@ export default function Occurrences() {
         </button>
       </form>
 
-      {occurrences.length > 0 ? (
+      {ocorrencias.length > 0 ? (
         <ul className="space-y-4">
-          {occurrences.map((o) => (
+          {ocorrencias.map((o) => (
             <li
               key={o.id}
-              className="bg-white rounded-lg p-4 shadow-md border-l-4"
+              className="relative bg-white rounded-lg p-4 shadow-md border-l-4"
               style={{
                 borderColor:
-                  o.priority === "alta"
+                  o.prioridade === "alta"
                     ? "#dc2626"
-                    : o.priority === "média"
+                    : o.prioridade === "média"
                     ? "#f59e0b"
                     : "#16a34a",
               }}
             >
-              <h4 className="font-semibold">{o.title}</h4>
-              <p className="text-sm text-gray-600 mt-1">{o.description}</p>
+              <button
+                onClick={() => handleDeleteClick(o.id)}
+                className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-sm"
+              >
+                ✕
+              </button>
+              <h4 className="font-semibold">{o.titulo}</h4>
+              <p className="text-sm text-gray-600 mt-1">{o.descricao}</p>
               <p className="text-xs mt-2 text-gray-500">
-                Prioridade: <strong>{o.priority}</strong>
+                Prioridade: <strong>{o.prioridade}</strong>
               </p>
             </li>
           ))}
@@ -106,6 +153,14 @@ export default function Occurrences() {
           Nenhuma ocorrência criada ainda.
         </p>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        title="Excluir ocorrência"
+        description="Tem certeza que deseja excluir esta ocorrência? Essa ação não poderá ser desfeita."
+      />
     </div>
   );
 }

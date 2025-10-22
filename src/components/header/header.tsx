@@ -25,22 +25,11 @@ const Header: React.FC<HeaderProps> = () => {
             </li>
 
             <li className="nav__menu__list__item">
-              <Link to="/projects" className="nav__menu__list__item__link">
-                Projetos
-              </Link>
-            </li>
-
-            <li className="nav__menu__list__item">
               <Link to="/occurrences" className="nav__menu__list__item__link">
                 Ocorrências
               </Link>
             </li>
 
-            <li className="nav__menu__list__item">
-              <Link to="/dashboard" className="nav__menu__list__item__link">
-                Dashboard
-              </Link>
-            </li>
             <li className="nav__menu__list__item">
               <Link className="nav__menu__list__item__link" to="/">
                 Login
