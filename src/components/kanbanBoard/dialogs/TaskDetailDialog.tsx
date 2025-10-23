@@ -2,8 +2,8 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import React from "react";
-import { Ocorrencia } from "../../../api/types/ocorrencia";
+import type React from "react";
+import type { Ocorrencia } from "../../../api/types/ocorrencia";
 
 interface TaskDetailDialogProps {
   open: boolean;
