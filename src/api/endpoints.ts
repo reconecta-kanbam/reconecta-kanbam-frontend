@@ -1,5 +1,3 @@
-const BASE_URL = "https://sistema-de-ocorrencias-production.up.railway.app";
-
 const ENDPOINTS = {
   AUTH_LOGIN: "/auth/login",
   AUTH_REGISTER: "/auth/register",
@@ -25,5 +23,4 @@ const ENDPOINTS = {
   LIST_KANBAN: "/kanban",
 } as const;
 
-export { BASE_URL };
 export default ENDPOINTS;
