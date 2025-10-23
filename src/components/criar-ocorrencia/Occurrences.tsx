@@ -12,6 +12,7 @@ import {
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
 import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
+import { toast } from "sonner";
 
 export default function Occurrences() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
@@ -50,9 +51,8 @@ export default function Occurrences() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação simples
     if (!form.titulo.trim() || !form.descricao.trim()) {
-      alert("Título e descrição são obrigatórios.");
+      toast.warning("Preencha todos os campos!");
       return;
     }
 
@@ -60,7 +60,8 @@ export default function Occurrences() {
       const nova = await createOcorrencia(form);
       setOcorrencias((prev) => [...prev, nova]);
 
-      // Reset do formulário
+      toast.success("Ocorrência criada com sucesso!");
+
       setForm({
         titulo: "",
         descricao: "",
@@ -68,8 +69,8 @@ export default function Occurrences() {
         colaboradorId: 7,
       });
     } catch (err) {
-      console.error("Erro ao criar ocorrência", err);
-      alert("Erro ao criar ocorrência. Verifique os dados e tente novamente.");
+      console.error(err);
+      toast.error("Erro ao criar ocorrência. Tente novamente.");
     }
   };
 
