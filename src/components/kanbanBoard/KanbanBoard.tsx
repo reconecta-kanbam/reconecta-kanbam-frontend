@@ -10,6 +10,7 @@ import {
 import { TaskDetailDialog } from "./dialogs/TaskDetailDialog";
 import { getKanbanData } from "../../api/services/kanban";
 import { Column, Card } from "../../api/types/kanban";
+import { Ocorrencia } from "../../api/types/ocorrencia";
 
 const KanbanBoard: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>([]);
@@ -105,12 +106,11 @@ const KanbanBoard: React.FC = () => {
           Nenhuma ocorrência disponível.
         </p>
       )}
-
-      {selectedCard && (
+      {selectedCard?.ocorrencia && (
         <TaskDetailDialog
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          title={selectedCard.titulo}
+          ocorrencia={selectedCard.ocorrencia}
         />
       )}
     </>

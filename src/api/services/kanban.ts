@@ -1,5 +1,6 @@
 import { listOcorrencias } from "./ocorrencias";
-import { Column } from "../types/kanban";
+import { Column, Card } from "../types/kanban";
+import { Ocorrencia } from "../types/ocorrencia";
 
 /**
  * Busca ocorrências do backend e agrupa por status para montar o Kanban dinamicamente.
@@ -19,24 +20,27 @@ export const getKanbanData = async (filters?: {
   console.log(`✅ [KANBAN] ${ocorrencias.length} ocorrências carregadas.`);
 
   // 🔹 Agrupar por status dinamicamente
-  const grouped: Record<string, typeof ocorrencias> = {};
+  const grouped: Record<string, Ocorrencia[]> = {};
 
   ocorrencias.forEach((o) => {
-    const status = o.status || "Sem status";
+    const status = o.status?.nome || "Sem status";
     if (!grouped[status]) grouped[status] = [];
     grouped[status].push(o);
   });
 
-  // 🔹 Gerar colunas
+  // 🔹 Gerar colunas compatíveis com o tipo Column e Card
   const columns: Column[] = Object.entries(grouped).map(([status, group]) => ({
     id: status.toLowerCase().replace(/\s+/g, "-"),
     titulo: status,
-    cards: group.map((o) => ({
-      id: String(o.id),
-      titulo: o.titulo,
-      descricao: o.descricao,
-      colaboradorNome: o.colaboradorNome,
-    })),
+    cards: group.map(
+      (o): Card => ({
+        id: String(o.id),
+        titulo: o.titulo,
+        descricao: o.descricao,
+        colaboradorNome: o.colaborador?.nome || "Não atribuído",
+        ocorrencia: o,
+      })
+    ),
   }));
 
   console.log("📊 [KANBAN] Colunas geradas:", columns);
