@@ -5,7 +5,7 @@ export interface Ocorrencia {
   status?: string; // Ex: "Backlog", "Em andamento", "Concluído"
   colaboradorId?: number;
   colaboradorNome?: string;
-  setorId?: number;
+  setor?: Setor;
   dataCriacao?: string;
   subtarefas?: Subtarefa[];
 }
@@ -23,4 +23,9 @@ export interface CreateOcorrenciaRequest {
   setorId: number;
   colaboradorId?: number;
   colaboradorNome?: string;
+}
+
+export interface Setor {
+  id: number;
+  nome: string;
 }

@@ -9,45 +9,59 @@ import {
 import {
   Ocorrencia,
   CreateOcorrenciaRequest,
+  Setor,
 } from "../../api/types/ocorrencia";
 import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
 
 export default function Occurrences() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
     descricao: "",
-    setorId: 1,
+    setorId: 1, // apenas o ID
     colaboradorId: 7,
   });
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // 🔹 Buscar ocorrências existentes
+  // 🔹 Buscar ocorrências e setores do backend
   useEffect(() => {
-    const loadOcorrencias = async () => {
+    const loadData = async () => {
       try {
-        const data = await listOcorrencias();
-        console.log("✅ Ocorrências carregadas:", data);
-        setOcorrencias(data);
+        const ocorrenciasData = await listOcorrencias();
+        setOcorrencias(ocorrenciasData);
+
+        // Exemplo: setores poderiam vir de outro endpoint
+        const setoresData: Setor[] = [
+          { id: 1, nome: "TI" },
+          { id: 2, nome: "Financeiro" },
+          { id: 3, nome: "RH" },
+          { id: 4, nome: "Operações" },
+        ];
+        setSetores(setoresData);
       } catch (err) {
-        console.error("❌ Erro ao buscar ocorrências", err);
+        console.error("Erro ao carregar dados", err);
       }
     };
-    loadOcorrencias();
+    loadData();
   }, []);
 
   // 🔹 Criar nova ocorrência
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      console.log("🟢 Enviando nova ocorrência:", form);
       const nova = await createOcorrencia(form);
-      console.log("✅ Criada:", nova);
       setOcorrencias((prev) => [...prev, nova]);
-      setForm({ titulo: "", descricao: "", setorId: 1, colaboradorId: 7 });
+      setForm({
+        titulo: "",
+        descricao: "",
+        setorId: setores[0].id,
+        colaboradorId: 7,
+      });
     } catch (err) {
-      console.error("❌ Erro ao criar ocorrência", err);
+      console.error("Erro ao criar ocorrência", err);
     }
   };
 
@@ -60,12 +74,10 @@ export default function Occurrences() {
   const handleConfirmDelete = async () => {
     if (!selectedId) return;
     try {
-      console.log(`🟠 Excluindo ocorrência ${selectedId}...`);
       await deleteOcorrencia(selectedId);
       setOcorrencias((prev) => prev.filter((o) => o.id !== selectedId));
-      console.log(`✅ Ocorrência ${selectedId} removida`);
     } catch (err) {
-      console.error("❌ Erro ao excluir ocorrência", err);
+      console.error("Erro ao excluir ocorrência", err);
     }
   };
 
@@ -96,6 +108,22 @@ export default function Occurrences() {
             required
           />
         </div>
+        <div>
+          <label className="block font-medium text-gray-700">Setor</label>
+          <select
+            value={form.setorId}
+            onChange={(e) =>
+              setForm({ ...form, setorId: Number(e.target.value) })
+            }
+            className="w-full border p-2 rounded-md mt-1"
+          >
+            {setores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nome}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <button
           type="submit"
@@ -104,37 +132,6 @@ export default function Occurrences() {
           Criar Ocorrência
         </button>
       </form>
-
-      {ocorrencias.length > 0 ? (
-        <ul className="space-y-4">
-          {ocorrencias.map((o) => (
-            <li
-              key={o.id}
-              className="relative bg-white rounded-lg p-4 shadow-md border-l-4 border-indigo-500"
-            >
-              <button
-                onClick={() => handleDeleteClick(o.id)}
-                className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-sm"
-              >
-                ✕
-              </button>
-              <h4 className="font-semibold">{o.titulo}</h4>
-              <p className="text-sm text-gray-600 mt-1">{o.descricao}</p>
-              <p className="text-xs mt-2 text-gray-500">
-                Setor: <strong>{o.setorId}</strong> • Colaborador:{" "}
-                <strong>{o.colaboradorNome || o.colaboradorId}</strong>
-              </p>
-              {o.status && (
-                <p className="text-xs text-gray-400 mt-1">Status: {o.status}</p>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-gray-500 text-sm">
-          Nenhuma ocorrência criada ainda.
-        </p>
-      )}
 
       <ConfirmDialog
         open={confirmOpen}
