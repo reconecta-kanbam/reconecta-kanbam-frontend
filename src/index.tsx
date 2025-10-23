@@ -9,6 +9,7 @@ import KanbanBoard from "./components/kanbanBoard/KanbanBoard";
 import AuthPg from "./components/login/AuthPg";
 import PrivateRoute from "./components/PrivateRoute/PrivateRoute"; // Adicionado
 import Occurrences from "./components/criar-ocorrencia/Occurrences";
+import ListarOcorrencias from "./components/listar-ocorrencias/ListarOcorrencias";
 
 const router = createBrowserRouter([
   {
@@ -32,6 +33,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute>
             <Occurrences />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "listar-ocorrencias",
+        element: (
+          <PrivateRoute>
+            <ListarOcorrencias />
           </PrivateRoute>
         ),
       },

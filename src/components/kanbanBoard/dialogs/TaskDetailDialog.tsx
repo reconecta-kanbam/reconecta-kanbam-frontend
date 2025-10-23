@@ -19,40 +19,40 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-lg p-6 overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <Dialog.Title className="text-xl font-bold text-gray-800">
+        <Dialog.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+        <Dialog.Content className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-xl p-8 overflow-y-auto z-50 rounded-l-2xl">
+          <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-3">
+            <Dialog.Title className="text-2xl font-bold text-gray-900">
               Detalhes da Ocorrência
             </Dialog.Title>
-            <Dialog.Close className="text-gray-500 hover:text-gray-700">
+            <Dialog.Close className="text-gray-400 hover:text-gray-700 transition-colors">
               <X size={24} />
             </Dialog.Close>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Título e Descrição */}
-            <div>
-              <h3 className="font-semibold text-gray-700">Título</h3>
+            <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+              <h3 className="font-semibold text-gray-700 mb-1">Título</h3>
               <p className="text-gray-900">{ocorrencia.titulo}</p>
             </div>
 
-            <div>
-              <h3 className="font-semibold text-gray-700">Descrição</h3>
+            <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+              <h3 className="font-semibold text-gray-700 mb-1">Descrição</h3>
               <p className="text-gray-900">{ocorrencia.descricao}</p>
             </div>
 
             {/* Status */}
             {ocorrencia.status && (
-              <div>
-                <h3 className="font-semibold text-gray-700">Status</h3>
-                <p className="text-gray-900">{ocorrencia.status.nome}</p>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-1">Status</h3>
+                <p className="text-green-900">{ocorrencia.status.nome}</p>
               </div>
             )}
 
             {/* Gestor e Colaborador */}
             {ocorrencia.gestor && (
-              <div>
+              <div className="bg-gray-50 p-3 rounded-lg flex flex-col gap-1">
                 <h3 className="font-semibold text-gray-700">Gestor</h3>
                 <p className="text-gray-900">
                   {ocorrencia.gestor.nome} ({ocorrencia.gestor.email})
@@ -60,7 +60,7 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </div>
             )}
             {ocorrencia.colaborador && (
-              <div>
+              <div className="bg-gray-50 p-3 rounded-lg flex flex-col gap-1">
                 <h3 className="font-semibold text-gray-700">Colaborador</h3>
                 <p className="text-gray-900">
                   {ocorrencia.colaborador.nome} ({ocorrencia.colaborador.email})
@@ -70,22 +70,19 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
             {/* Setor */}
             {ocorrencia.setor && (
-              <div>
+              <div className="bg-gray-50 p-3 rounded-lg">
                 <h3 className="font-semibold text-gray-700">Setor</h3>
                 <p className="text-gray-900">{ocorrencia.setor.nome}</p>
               </div>
             )}
 
             {/* Datas */}
-            <div>
+            <div className="bg-gray-50 p-3 rounded-lg flex flex-col gap-1">
               <h3 className="font-semibold text-gray-700">Criado em</h3>
               <p className="text-gray-900">
                 {new Date(ocorrencia.createdAt).toLocaleString("pt-BR")}
               </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-700">
+              <h3 className="font-semibold text-gray-700 mt-2">
                 Última atualização
               </h3>
               <p className="text-gray-900">
@@ -102,9 +99,9 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
             {/* Subtarefas */}
             {ocorrencia.subtarefas.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-700">Subtarefas</h3>
-                <ul className="list-disc list-inside">
+              <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h3 className="font-semibold text-gray-700 mb-2">Subtarefas</h3>
+                <ul className="list-disc list-inside space-y-1">
                   {ocorrencia.subtarefas.map((sub) => (
                     <li key={sub.id} className="text-gray-900">
                       {sub.titulo}{" "}
@@ -113,6 +110,8 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                           ({sub.status})
                         </span>
                       )}
+                      {sub.descricao}
+                      {sub.createdAt}
                     </li>
                   ))}
                 </ul>
@@ -121,9 +120,9 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
             {/* Histórico */}
             {ocorrencia.historicos.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-700">Histórico</h3>
-                <ul className="list-disc list-inside">
+              <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h3 className="font-semibold text-gray-700 mb-2">Histórico</h3>
+                <ul className="list-disc list-inside space-y-1">
                   {ocorrencia.historicos.map((h) => (
                     <li key={h.id} className="text-gray-900">
                       {new Date(h.dataHora).toLocaleString("pt-BR")}
@@ -135,13 +134,15 @@ export const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
             {/* Documentação */}
             {ocorrencia.documentacaoUrl && (
-              <div>
-                <h3 className="font-semibold text-gray-700">Documentação</h3>
+              <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h3 className="font-semibold text-gray-700 mb-1">
+                  Documentação
+                </h3>
                 <a
                   href={ocorrencia.documentacaoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 hover:underline font-medium"
                 >
                   Abrir documento
                 </a>
