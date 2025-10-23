@@ -8,8 +8,8 @@ import {
 } from "../../api/services/ocorrencias";
 import {
   Ocorrencia,
-  CreateOcorrenciaRequest,
   Setor,
+  CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
 import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
 
@@ -19,21 +19,19 @@ export default function Occurrences() {
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
     descricao: "",
-    setorId: 1, // apenas o ID
+    setorId: 1,
     colaboradorId: 7,
   });
-
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // 🔹 Buscar ocorrências e setores do backend
+  // 🔹 Carregar ocorrências e setores
   useEffect(() => {
     const loadData = async () => {
       try {
         const ocorrenciasData = await listOcorrencias();
         setOcorrencias(ocorrenciasData);
 
-        // Exemplo: setores poderiam vir de outro endpoint
         const setoresData: Setor[] = [
           { id: 1, nome: "TI" },
           { id: 2, nome: "Financeiro" },
@@ -51,21 +49,31 @@ export default function Occurrences() {
   // 🔹 Criar nova ocorrência
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação simples
+    if (!form.titulo.trim() || !form.descricao.trim()) {
+      alert("Título e descrição são obrigatórios.");
+      return;
+    }
+
     try {
       const nova = await createOcorrencia(form);
       setOcorrencias((prev) => [...prev, nova]);
+
+      // Reset do formulário
       setForm({
         titulo: "",
         descricao: "",
-        setorId: setores[0].id,
+        setorId: setores[0]?.id || 1,
         colaboradorId: 7,
       });
     } catch (err) {
       console.error("Erro ao criar ocorrência", err);
+      alert("Erro ao criar ocorrência. Verifique os dados e tente novamente.");
     }
   };
 
-  // 🔹 Deletar ocorrência com modal
+  // 🔹 Deletar ocorrência
   const handleDeleteClick = (id: number) => {
     setSelectedId(id);
     setConfirmOpen(true);
@@ -73,11 +81,13 @@ export default function Occurrences() {
 
   const handleConfirmDelete = async () => {
     if (!selectedId) return;
+
     try {
       await deleteOcorrencia(selectedId);
       setOcorrencias((prev) => prev.filter((o) => o.id !== selectedId));
     } catch (err) {
       console.error("Erro ao excluir ocorrência", err);
+      alert("Erro ao excluir ocorrência. Tente novamente.");
     }
   };
 
@@ -98,6 +108,7 @@ export default function Occurrences() {
             required
           />
         </div>
+
         <div>
           <label className="block font-medium text-gray-700">Descrição</label>
           <textarea
@@ -108,6 +119,7 @@ export default function Occurrences() {
             required
           />
         </div>
+
         <div>
           <label className="block font-medium text-gray-700">Setor</label>
           <select

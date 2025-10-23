@@ -7,8 +7,8 @@ import { AuthProvider } from "./context/AuthContext"; // Adicionado
 /* ============ Pages =========== */
 import KanbanBoard from "./components/kanbanBoard/KanbanBoard";
 import AuthPg from "./components/login/AuthPg";
-import Occurrences from "./components/occurrences/Occurrences";
 import PrivateRoute from "./components/PrivateRoute/PrivateRoute"; // Adicionado
+import Occurrences from "./components/criar-ocorrencia/Occurrences";
 
 const router = createBrowserRouter([
   {
@@ -28,7 +28,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "occurrences",
+        path: "criar-ocorrencia",
         element: (
           <PrivateRoute>
             <Occurrences />

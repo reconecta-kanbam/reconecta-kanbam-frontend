@@ -7,9 +7,7 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
-import { EditCardDialog } from "./dialogs/EditCardDialog";
 import { WorkflowConfigDialog } from "./dialogs/WorkflowConfigDialog";
-import { AddCardDialog } from "./dialogs/AddCardDialog";
 import { TaskDetailDialog } from "./dialogs/TaskDetailDialog";
 import { getKanbanData } from "../../api/services/kanban";
 import { Column, Card } from "../../api/types/kanban";
@@ -20,7 +18,6 @@ const KanbanBoard: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [workflowDialogOpen, setWorkflowDialogOpen] = useState(false);
   const [addCardOpen, setAddCardOpen] = useState(false);
-  const [selectedColId, setSelectedColId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   // 🔹 Carrega os dados de ocorrências como cards
@@ -141,25 +138,9 @@ const KanbanBoard: React.FC = () => {
           Nenhuma ocorrência disponível.
         </p>
       )}
-
-      {selectedCard && (
-        <EditCardDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          initialTitle={selectedCard.titulo}
-          onSave={handleSaveEdit}
-        />
-      )}
-
       <WorkflowConfigDialog
         open={workflowDialogOpen}
         onOpenChange={setWorkflowDialogOpen}
-        onSave={() => {}}
-      />
-
-      <AddCardDialog
-        open={addCardOpen}
-        onOpenChange={setAddCardOpen}
         onSave={() => {}}
       />
 
