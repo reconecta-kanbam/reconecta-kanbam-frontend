@@ -6,33 +6,32 @@ import {
   listOcorrencias,
   deleteOcorrencia,
 } from "../../api/services/ocorrencias";
+import {
+  Ocorrencia,
+  CreateOcorrenciaRequest,
+} from "../../api/types/ocorrencia";
 import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
-
-interface Ocorrencia {
-  id: string;
-  titulo: string;
-  descricao: string;
-  prioridade: "baixa" | "média" | "alta";
-}
 
 export default function Occurrences() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
     descricao: "",
-    prioridade: "média" as "baixa" | "média" | "alta",
+    setorId: 1,
+    colaboradorId: 7,
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // 🔹 Buscar ocorrências existentes
   useEffect(() => {
     const loadOcorrencias = async () => {
       try {
         const data = await listOcorrencias();
+        console.log("✅ Ocorrências carregadas:", data);
         setOcorrencias(data);
       } catch (err) {
-        console.error("Erro ao buscar ocorrências", err);
+        console.error("❌ Erro ao buscar ocorrências", err);
       }
     };
     loadOcorrencias();
@@ -42,16 +41,18 @@ export default function Occurrences() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      console.log("🟢 Enviando nova ocorrência:", form);
       const nova = await createOcorrencia(form);
+      console.log("✅ Criada:", nova);
       setOcorrencias((prev) => [...prev, nova]);
-      setForm({ titulo: "", descricao: "", prioridade: "média" });
+      setForm({ titulo: "", descricao: "", setorId: 1, colaboradorId: 7 });
     } catch (err) {
-      console.error("Erro ao criar ocorrência", err);
+      console.error("❌ Erro ao criar ocorrência", err);
     }
   };
 
   // 🔹 Deletar ocorrência com modal
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = (id: number) => {
     setSelectedId(id);
     setConfirmOpen(true);
   };
@@ -59,10 +60,12 @@ export default function Occurrences() {
   const handleConfirmDelete = async () => {
     if (!selectedId) return;
     try {
+      console.log(`🟠 Excluindo ocorrência ${selectedId}...`);
       await deleteOcorrencia(selectedId);
       setOcorrencias((prev) => prev.filter((o) => o.id !== selectedId));
+      console.log(`✅ Ocorrência ${selectedId} removida`);
     } catch (err) {
-      console.error("Erro ao excluir ocorrência", err);
+      console.error("❌ Erro ao excluir ocorrência", err);
     }
   };
 
@@ -93,23 +96,6 @@ export default function Occurrences() {
             required
           />
         </div>
-        <div>
-          <label className="block font-medium text-gray-700">Prioridade</label>
-          <select
-            className="border p-2 rounded-md mt-1"
-            value={form.prioridade}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                prioridade: e.target.value as "baixa" | "média" | "alta",
-              })
-            }
-          >
-            <option value="baixa">Baixa</option>
-            <option value="média">Média</option>
-            <option value="alta">Alta</option>
-          </select>
-        </div>
 
         <button
           type="submit"
@@ -124,15 +110,7 @@ export default function Occurrences() {
           {ocorrencias.map((o) => (
             <li
               key={o.id}
-              className="relative bg-white rounded-lg p-4 shadow-md border-l-4"
-              style={{
-                borderColor:
-                  o.prioridade === "alta"
-                    ? "#dc2626"
-                    : o.prioridade === "média"
-                    ? "#f59e0b"
-                    : "#16a34a",
-              }}
+              className="relative bg-white rounded-lg p-4 shadow-md border-l-4 border-indigo-500"
             >
               <button
                 onClick={() => handleDeleteClick(o.id)}
@@ -143,8 +121,12 @@ export default function Occurrences() {
               <h4 className="font-semibold">{o.titulo}</h4>
               <p className="text-sm text-gray-600 mt-1">{o.descricao}</p>
               <p className="text-xs mt-2 text-gray-500">
-                Prioridade: <strong>{o.prioridade}</strong>
+                Setor: <strong>{o.setorId}</strong> • Colaborador:{" "}
+                <strong>{o.colaboradorNome || o.colaboradorId}</strong>
               </p>
+              {o.status && (
+                <p className="text-xs text-gray-400 mt-1">Status: {o.status}</p>
+              )}
             </li>
           ))}
         </ul>

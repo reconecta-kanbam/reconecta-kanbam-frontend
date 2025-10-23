@@ -1,6 +1,8 @@
 export interface Card {
   id: string;
   titulo: string;
+  descricao?: string;
+  colaboradorNome?: string;
 }
 
 export interface Column {

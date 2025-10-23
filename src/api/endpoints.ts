@@ -9,11 +9,18 @@ const ENDPOINTS = {
 
   // OCORRÊNCIAS
   CREATE_OCORRENCIA: "/ocorrencias",
+  CREATE_OCORRENCIA_PUBLIC: "/ocorrencias/public",
   LIST_OCORRENCIAS: "/ocorrencias",
-  DELETE_OCORRENCIA: (id: string | number) => `/ocorrencias/${id}`,
-  EDIT_OCORRENCIA: (id: string | number) => `/ocorrencias/${id}`,
-  GET_OCORRENCIA_BY_USER: (userId: string | number) =>
-    `/ocorrencias/usuario/${userId}`,
+  GET_OCORRENCIA_BY_USER: (userId: number) => `/users/${userId}/ocorrencias`,
+  DELETE_OCORRENCIA: (id: number) => `/ocorrencias/${id}`,
+
+  // Subtarefas
+  CREATE_SUBTAREFA: (ocorrenciaId: number) =>
+    `/ocorrencias/${ocorrenciaId}/subtarefas`,
+  EDIT_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
+    `/users/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
+  DELETE_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
+    `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
 
   // KANBAN (mock por enquanto, depois backend vai gerar via estados)
   LIST_KANBAN: "/kanban",

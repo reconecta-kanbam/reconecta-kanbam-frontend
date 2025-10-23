@@ -116,11 +116,19 @@ const KanbanBoard: React.FC = () => {
                             }}
                             className="bg-gray-100 hover:bg-gray-200 rounded-md p-3 mb-2 cursor-pointer transition"
                           >
-                            {card.titulo}
+                            <h4 className="font-semibold text-gray-800">
+                              {card.titulo}
+                            </h4>
+                            {card.colaboradorNome && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Responsável: {card.colaboradorNome}
+                              </p>
+                            )}
                           </div>
                         )}
                       </Draggable>
                     ))}
+
                     {provided.placeholder}
                   </div>
                 )}

@@ -1,15 +1,26 @@
 export interface Ocorrencia {
-  id: string;
+  id: number;
   titulo: string;
   descricao: string;
-  prioridade: "baixa" | "média" | "alta";
-  status?: string;
-  usuarioId?: string;
+  status?: string; // Ex: "Backlog", "Em andamento", "Concluído"
+  colaboradorId?: number;
+  colaboradorNome?: string;
+  setorId?: number;
   dataCriacao?: string;
+  subtarefas?: Subtarefa[];
+}
+
+export interface Subtarefa {
+  id: number;
+  titulo: string;
+  descricao?: string;
+  responsavelId?: number;
 }
 
 export interface CreateOcorrenciaRequest {
   titulo: string;
   descricao: string;
-  prioridade: "baixa" | "média" | "alta";
+  setorId: number;
+  colaboradorId?: number;
+  colaboradorNome?: string;
 }
