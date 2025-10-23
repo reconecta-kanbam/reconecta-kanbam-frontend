@@ -35,8 +35,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white relative">
+        <div className="bg-[#4c010c] p-6 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -44,7 +43,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             <X className="w-5 h-5" />
           </button>
           <h2 className="text-2xl font-bold mb-2 pr-10">{ocorrencia.titulo}</h2>
-          <p className="text-blue-100 text-sm">{ocorrencia.descricao}</p>
+          <p className="text-red-100 text-sm">{ocorrencia.descricao}</p>
         </div>
 
         <div className="overflow-y-auto max-h-[calc(85vh-120px)] p-6">
@@ -74,14 +73,14 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-xl border border-orange-200">
+            <div className="bg-gradient-to-br from-[#ffffa6] to-yellow-100 p-4 rounded-xl border border-yellow-300">
               <div className="flex items-center gap-2 mb-1">
-                <Calendar className="w-4 h-4 text-orange-600" />
-                <span className="text-xs font-semibold text-orange-700 uppercase tracking-wide">
+                <Calendar className="w-4 h-4 text-yellow-800" />
+                <span className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">
                   Criado em
                 </span>
               </div>
-              <p className="text-orange-900 font-medium text-sm">
+              <p className="text-yellow-900 font-medium text-sm">
                 {new Date(ocorrencia.createdAt).toLocaleDateString("pt-BR")}
               </p>
             </div>
@@ -90,7 +89,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
           {/* Subtarefas */}
           <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <Layers className="w-5 h-5 text-indigo-600" />
+              <Layers className="w-5 h-5 text-[#4c010c]" />
               Subtarefas ({ocorrencia.subtarefas.length})
             </h3>
             <div className="space-y-2">
@@ -118,17 +117,16 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             </div>
           </div>
 
-          {/* Adicionar Subtarefa */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200">
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 p-5 rounded-xl border-2 border-[#4c010c]/20">
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-blue-600" />
+              <Plus className="w-5 h-5 text-[#4c010c]" />
               Adicionar Nova Subtarefa
             </h3>
             <div className="space-y-3">
               <input
                 type="text"
                 placeholder="Título da subtarefa"
-                className="w-full p-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
                 value={newSubtask.titulo}
                 onChange={(e) =>
                   setNewSubtask({ ...newSubtask, titulo: e.target.value })
@@ -136,7 +134,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               />
               <textarea
                 placeholder="Descrição da subtarefa (opcional)"
-                className="w-full p-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all resize-none"
                 rows={3}
                 value={newSubtask.descricao}
                 onChange={(e) =>
@@ -145,7 +143,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               />
               <button
                 onClick={handleAddSubtask}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                className="w-full bg-[#4c010c] text-white px-4 py-3 rounded-lg hover:bg-[#3a0109] transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Adicionar Subtarefa
@@ -219,7 +217,7 @@ const ListarOcorrencias = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50">
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
@@ -236,7 +234,7 @@ const ListarOcorrencias = () => {
             <input
               type="text"
               placeholder="Pesquisar ocorrências por título ou descrição..."
-              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm hover:shadow-md bg-white"
+              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all shadow-sm hover:shadow-md bg-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -261,17 +259,17 @@ const ListarOcorrencias = () => {
             filteredOcorrencias.map((ocorrencia) => (
               <div
                 key={ocorrencia.id}
-                className="bg-white border-2 border-gray-200 rounded-2xl p-6 cursor-pointer hover:shadow-xl hover:border-blue-300 transition-all duration-200 hover:-translate-y-1 group"
+                className="bg-white border-2 border-gray-200 rounded-2xl p-6 cursor-pointer hover:shadow-xl hover:border-[#4c010c] transition-all duration-200 hover:-translate-y-1 group"
                 onClick={() => {
                   setSelectedOcorrencia(ocorrencia);
                   setIsDialogOpen(true);
                 }}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-[#4c010c] transition-colors">
                     {ocorrencia.titulo}
                   </h3>
-                  <span className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+                  <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-xs font-semibold border border-yellow-300">
                     #{ocorrencia.id}
                   </span>
                 </div>
@@ -282,7 +280,7 @@ const ListarOcorrencias = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="flex items-center gap-1 bg-purple-50 text-purple-700 px-3 py-1 rounded-full">
+                    <div className="flex items-center gap-1 bg-[#4c010c]/10 text-[#4c010c] px-3 py-1 rounded-full border border-[#4c010c]/20">
                       <Layers className="w-4 h-4" />
                       <span className="font-medium">
                         {ocorrencia.subtarefas.length} subtarefas
