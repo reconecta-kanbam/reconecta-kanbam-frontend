@@ -7,6 +7,7 @@ import ENDPOINTS from "../../api/endpoints";
 import { Search, Eye, Layers, Calendar } from "lucide-react";
 import OcorrenciaActions from "./OcorrenciaActions";
 import TaskDetailDialog from "../kanbanBoard/dialogs/TaskDetailDialog";
+import EditOcorrenciaDialog from "./EditOcorrenciaDialog";
 
 const ListarOcorrencias = () => {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
@@ -14,6 +15,7 @@ const ListarOcorrencias = () => {
   const [selectedOcorrencia, setSelectedOcorrencia] =
     useState<Ocorrencia | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editOcorrenciaId, setEditOcorrenciaId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchOcorrencias = async () => {
@@ -168,6 +170,7 @@ const ListarOcorrencias = () => {
                         setSelectedOcorrencia(null);
                       }
                     }}
+                    onEdit={(id) => setEditOcorrenciaId(id)}
                   />
                 </div>
               </div>
@@ -185,6 +188,43 @@ const ListarOcorrencias = () => {
             }}
             ocorrencia={selectedOcorrencia}
             onAddSubtask={handleAddSubtask} // agora incluído
+          />
+        )}
+
+        {editOcorrenciaId !== null && (
+          <EditOcorrenciaDialog
+            open={true}
+            onOpenChange={(open) => {
+              if (!open) setEditOcorrenciaId(null);
+            }}
+            ocorrencia={
+              ocorrencias.find((o) => o.id === editOcorrenciaId) || null
+            }
+            onUpdated={(updated) => {
+              setOcorrencias((prev) =>
+                prev.map((o) =>
+                  o.id === updated.id
+                    ? {
+                        ...updated,
+                        subtarefas: updated.subtarefas || [],
+                        colaborador: updated.colaborador || {
+                          id: 0,
+                          nome: "-",
+                          email: "",
+                          perfil: "",
+                        },
+                        gestor: updated.gestor || {
+                          id: 0,
+                          nome: "-",
+                          email: "",
+                          perfil: "",
+                        },
+                        setor: updated.setor || { id: 0, nome: "-" },
+                      }
+                    : o
+                )
+              );
+            }}
           />
         )}
       </div>

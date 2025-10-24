@@ -6,12 +6,14 @@ import { useState } from "react";
 
 interface OcorrenciaActionsProps {
   id: number;
-  onDeleted?: (id: number) => void; // para atualizar lista após deletar
+  onDeleted?: (id: number) => void;
+  onEdit?: (id: number) => void; // nova callback
 }
 
 const OcorrenciaActions: React.FC<OcorrenciaActionsProps> = ({
   id,
   onDeleted,
+  onEdit,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -24,9 +26,7 @@ const OcorrenciaActions: React.FC<OcorrenciaActionsProps> = ({
     try {
       setLoading(true);
       await deleteOcorrencia(id);
-
       alert("✅ Ocorrência deletada com sucesso!");
-
       if (onDeleted) onDeleted(id);
     } catch (error) {
       console.error("Erro ao deletar ocorrência:", error);
@@ -38,10 +38,10 @@ const OcorrenciaActions: React.FC<OcorrenciaActionsProps> = ({
 
   return (
     <div className="flex items-center gap-3">
-      {/* Editar (só criaremos depois) */}
+      {/* Editar */}
       <button
+        onClick={() => onEdit?.(id)}
         className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
-        disabled
       >
         <Pencil className="w-4 h-4" />
       </button>
