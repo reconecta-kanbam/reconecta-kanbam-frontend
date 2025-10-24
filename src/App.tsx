@@ -16,7 +16,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <Header />
+      {location.pathname !== "/login" && <Header />}
       <Toaster position="top-right" richColors />
       <Outlet />
       {location.pathname !== "/login" && <Footer />}
