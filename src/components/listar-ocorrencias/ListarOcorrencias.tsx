@@ -16,6 +16,7 @@ import {
   File,
   PenBox,
 } from "lucide-react";
+import OcorrenciaActions from "./OcorrenciaActions";
 
 interface TaskDetailDialogProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             <X className="w-5 h-5" />
           </button>
           <h2 className="text-2xl font-bold mb-2 pr-10">{ocorrencia.titulo}</h2>
+
           <p className="text-red-100 text-sm">{ocorrencia.descricao}</p>
         </div>
 
@@ -387,6 +389,14 @@ const ListarOcorrencias = () => {
                     {new Date(ocorrencia.createdAt).toLocaleDateString("pt-BR")}
                   </div>
                 </div>
+                <OcorrenciaActions
+                  id={ocorrencia.id}
+                  onDeleted={(deletedId) =>
+                    setOcorrencias((prev) =>
+                      prev.filter((o) => o.id !== deletedId)
+                    )
+                  }
+                />
               </div>
             ))
           )}
