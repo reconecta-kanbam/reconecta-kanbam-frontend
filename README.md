@@ -1,9 +1,10 @@
 # Reconecta Kanban
 
-<div style="text-align: center;">
-  <img src="./src/assets/images/logo.png" alt="Imagem/Icone seta a direita blue" style="width: 200px; height: 200px; margin-left: 5px;">
-</div>
+<div align="center">
 
+  <img src="./src/assets/images/logo.png" alt="Imagem/Icone seta a direita blue" style="width: 200px; height: 200px; margin-left: 5px;">
+
+</div>
 
 <h1 align="center">
  <a href="#">website view - Reconecta Kanba<img src="./src/assets/images/left.png" alt="Imagem/Icone seta a direita blue" style="width: 20px; height: 20px; margin-left: 5px;"></a>
