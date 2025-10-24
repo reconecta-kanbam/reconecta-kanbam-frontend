@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -30,14 +30,6 @@ const KanbanBoard: React.FC = () => {
     loadKanban();
   }, []);
 
-  const handleEdit = (colId: string, cardId: string) => {
-    const col = columns.find((c) => c.id === colId);
-    const card = col?.cards.find((card) => card.id === cardId);
-    if (card) {
-      setSelectedCard(card);
-    }
-  };
-
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -49,9 +41,6 @@ const KanbanBoard: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
       <div className="max-w-7xl mx-auto mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Kanban Board</h1>
-        {/* <p className="text-gray-600">
-          Arraste e solte os cards para organizar suas tarefas
-        </p> */}
       </div>
 
       {columns.length > 0 ? (
