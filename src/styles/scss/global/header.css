@@ -8,7 +8,6 @@
   z-index: 10;
   box-shadow: 0 0 60px #00000026;
   transition: 0.45s all;
-  cursor: pointer;
 }
 
 .header > .container {

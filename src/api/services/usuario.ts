@@ -10,8 +10,6 @@ export const loginUser = async (data: LoginRequest, rememberMe: boolean = true):
   
   const response = await api.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN, payload);
   
-  // Debug: veja o que a API está retornando
-  console.log('Resposta completa da API:', response.data);
   
   // Tenta extrair o token de diferentes possíveis estruturas
   const token = response.data.token || 
