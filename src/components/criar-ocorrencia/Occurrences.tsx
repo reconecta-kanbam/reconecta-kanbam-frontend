@@ -4,19 +4,17 @@ import { useEffect, useState } from "react";
 import {
   createOcorrencia,
   listOcorrencias,
-  deleteOcorrencia,
 } from "../../api/services/ocorrencias";
 import {
   Ocorrencia,
   Setor,
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
-import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
 import { toast } from "sonner";
 import { Plus, FileText, Layers } from "lucide-react";
 
 export default function Occurrences() {
-  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [_ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
@@ -24,8 +22,6 @@ export default function Occurrences() {
     setorId: 1,
     colaboradorId: 7,
   });
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // 🔹 Carregar ocorrências e setores
   useEffect(() => {
@@ -72,24 +68,6 @@ export default function Occurrences() {
     } catch (err) {
       console.error(err);
       toast.error("Erro ao criar ocorrência. Tente novamente.");
-    }
-  };
-
-  // 🔹 Deletar ocorrência
-  const handleDeleteClick = (id: number) => {
-    setSelectedId(id);
-    setConfirmOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!selectedId) return;
-
-    try {
-      await deleteOcorrencia(selectedId);
-      setOcorrencias((prev) => prev.filter((o) => o.id !== selectedId));
-    } catch (err) {
-      console.error("Erro ao excluir ocorrência", err);
-      alert("Erro ao excluir ocorrência. Tente novamente.");
     }
   };
 

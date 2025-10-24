@@ -34,6 +34,11 @@ export interface Ocorrencia {
     descricao?: string;
     status?: string;
     createdAt: string;
+    responsavel?: {
+      id: number;
+      nome: string;
+      email: string;
+    };
   }[];
   historicos: {
     id: number;
@@ -45,7 +50,13 @@ export interface Subtarefa {
   id: number;
   titulo: string;
   descricao?: string;
-  responsavelId?: number;
+  status?: string;
+  createdAt: string;
+  responsavel?: {
+    id: number;
+    nome: string;
+    email: string;
+  };
 }
 
 export interface CreateOcorrenciaRequest {
