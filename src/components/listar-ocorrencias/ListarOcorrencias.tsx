@@ -4,15 +4,7 @@ import { useEffect, useState } from "react";
 import type { Ocorrencia } from "../../api/types/ocorrencia";
 import api from "../../api/api";
 import ENDPOINTS from "../../api/endpoints";
-import {
-  Search,
-  Eye,
-  Pencil,
-  Layers,
-  Calendar,
-  User,
-  Plus,
-} from "lucide-react";
+import { Search, Eye, Layers, Calendar } from "lucide-react";
 import OcorrenciaActions from "./OcorrenciaActions";
 import TaskDetailDialog from "../kanbanBoard/dialogs/TaskDetailDialog";
 
@@ -162,17 +154,6 @@ const ListarOcorrencias = () => {
                     className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                   >
                     <Eye className="w-5 h-5 text-gray-600" />
-                  </button>
-
-                  {/* Editar */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log("Editar", ocorrencia.id);
-                    }}
-                    className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
-                  >
-                    <Pencil className="w-5 h-5" />
                   </button>
 
                   {/* Deletar */}
