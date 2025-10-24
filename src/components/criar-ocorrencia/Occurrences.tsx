@@ -74,24 +74,6 @@ export default function Occurrences() {
     }
   };
 
-  // 🔹 Deletar ocorrência
-  const handleDeleteClick = (id: number) => {
-    setSelectedId(id);
-    setConfirmOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!selectedId) return;
-
-    try {
-      await deleteOcorrencia(selectedId);
-      setOcorrencias((prev) => prev.filter((o) => o.id !== selectedId));
-    } catch (err) {
-      console.error("Erro ao excluir ocorrência", err);
-      alert("Erro ao excluir ocorrência. Tente novamente.");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
       <div className="max-w-4xl mx-auto">

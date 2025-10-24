@@ -7,11 +7,10 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
-import { TaskDetailDialog } from "./dialogs/TaskDetailDialog";
 import { getKanbanData } from "../../api/services/kanban";
 import { Column, Card } from "../../api/types/kanban";
-import { Ocorrencia } from "../../api/types/ocorrencia";
 import { User, GripVertical, Eye } from "lucide-react";
+import TaskDetailDialog from "./dialogs/TaskDetailDialog";
 
 const KanbanBoard: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>([]);
