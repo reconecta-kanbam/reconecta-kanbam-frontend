@@ -11,10 +11,10 @@ import {
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
-import { Plus, FileText, Layers } from "lucide-react";
+import { Plus, FileText, Layers, List } from "lucide-react";
 
 export default function Occurrences() {
-  const [_ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
@@ -159,6 +159,20 @@ export default function Occurrences() {
             acompanhar o progresso no Kanban Board
           </p>
         </div>
+
+        {ocorrencias.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+              Última Ocorrência
+            </h2>
+            <div className="bg-white shadow-xl rounded-2xl p-8 border-2 border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                {ocorrencias[0].titulo}
+              </h3>
+              <p className="text-gray-600">{ocorrencias[0].descricao}</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
