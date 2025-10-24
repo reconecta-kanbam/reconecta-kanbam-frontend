@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/images/logo.png";
 
 interface HeaderProps {
@@ -7,6 +8,12 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = () => {
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <>
       <header className="header">
@@ -43,9 +50,15 @@ const Header: React.FC<HeaderProps> = () => {
             </li>
 
             <li className="nav__menu__list__item">
-              <Link className="nav__menu__list__item__link" to="/">
-                Login
-              </Link>
+              <button
+                onClick={handleLogout}
+                className="nav__menu__list__item__link"
+                style={{
+                  cursor: "pointer",
+                }}
+              >
+                Sair
+              </button>
             </li>
           </ul>
         </div>
