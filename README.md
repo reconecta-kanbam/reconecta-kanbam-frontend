@@ -1,50 +1,83 @@
-<<<<<<< HEAD
-# Getting Started with Create React App
+# Reconecta Kanban
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+<div style="text-align: center;">
+  <img src="./src/assets/images/logo.png" alt="Imagem/Icone seta a direita blue" style="width: 200px; height: 200px; margin-left: 5px;">
+</div>
 
-## Available Scripts
 
-In the project directory, you can run:
+<h1 align="center">
+ <a href="#">website view - Reconecta Kanba<img src="./src/assets/images/left.png" alt="Imagem/Icone seta a direita blue" style="width: 20px; height: 20px; margin-left: 5px;"></a>
+</h1>
 
-### `npm start`
+# 🎯 Reconecta Kanba
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+>Construir um sistema dinâmico de ocorrências e projetos onde equipes possam definir fluxos de trabalho configuráveis, gerenciar ocorrências via Slack, criar projetos/tarefas com múltiplos responsáveis e documentação (arquivos e URLs).
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 🏗️ Arquitetura
 
-### `npm test`
+<img src="./src/assets/images/diagramadeArquitetura.png" alt="Imagem/Icone seta a direita blue" style="width: 100%; height: 400; margin-left: 5px;">
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### `npm run build`
+## 💻 Como Executar o Projeto
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Siga os passos abaixo para rodar o projeto localmente:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. **Clone o repositório**  
+```bash
+git clone https://github.com/reconecta-kanbam/reconecta-kanbam-frontend
+```
+2. **Entre na pasta do projeto**
+```bash
+cd ./NomedoArquivo
+```
+3. **Instale as dependências**
+```bash
+npm install
+# ou
+yarn install
+```
+4. **Inicie o servidor de desenvolvimento**
+```bash
+npm start
+# ou
+npm run dev
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Criar nova branch
 
-### `npm run eject`
+Siga os passos abaixo para rodar o criar sua Branch:
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+1. Crie a nova branch
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+Lembre de manter o padrão "feature-"
+git checkout -b feature-nome-que-voce-vai-add
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+2. No VSCode, no canto inferior esquerdo, você verá a branch atual em que está trabalhando. Verifique se ela mostra o nome correto da nova branch, por exemplo:
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```
+feature-filtro-do-mapa
+```
 
-## Learn More
+3. Adicione as alterações
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+git add .
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-=======
-# reconecta-kanban-frontend
->>>>>>> dc69837c54cdcf09cf9bcd635174d3d2759360d0
+4. Faça o commit com a mensagem adequada
+
+```
+git commit -m "Adiciona funcionalidade...."
+```
+
+5. Empurre a nova branch para o repositório remoto
+
+```
+git push origin feature-nome-que-voce-vai-add
+```
+
+## Documentação
+
+<a href="https://docs.google.com/document/d/1jbZXKijIYzSUKSWUi4DA_-0OBQg9qu1dOLG2O2YvulE/edit?tab=t.0">Documentação Doc. <img src="./src/assets/images/left.png" alt="Imagem Seta A Direita Blue" style="width: 12px; height: 12px; "></a>
