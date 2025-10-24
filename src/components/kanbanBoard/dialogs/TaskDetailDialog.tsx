@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Plus, CheckCircle2, Layers, Calendar, User } from "lucide-react";
+import { X, Plus, CheckCircle2, Layers, Calendar } from "lucide-react";
 import type React from "react";
 import type { Ocorrencia } from "../../../api/types/ocorrencia";
 import { useState } from "react";
