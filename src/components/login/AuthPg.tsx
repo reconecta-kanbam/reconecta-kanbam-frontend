@@ -4,19 +4,32 @@ import { loginUser, registerUser, recoverPassword } from '../../api/services/usu
 import { getSectors } from '../../api/services/sectors';
 import { Setor, UserRole } from '../../api/types/usuario';
 import { useAuth } from '../../context/AuthContext';
+import ErrorMessage from '../../ErrorMessage/services/ErrorMessageLogin';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES, getErrorMessage, validateField } from '../../ErrorMessage/utils/errorMessageLogin';
 
 const AuthPg: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, updateAuth } = useAuth(); // Adicione updateAuth
+  const { isAuthenticated, updateAuth } = useAuth();
 
   const [showLogin, setShowLogin] = useState(true);
   const [sectors, setSectors] = useState<Setor[]>([]);
   const [loadingSectors, setLoadingSectors] = useState(true);
-  const [sectorsError, setSectorsError] = useState('');
   const [loading, setLoading] = useState(false);
+  
   const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<{ email?: boolean; password?: boolean }>({});
+  const [errorType, setErrorType] = useState<'error' | 'warning' | 'info' | 'success'>('error');
+  const [sectorsError, setSectorsError] = useState('');
+  
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: boolean;
+    email?: boolean;
+    password?: boolean;
+    confirmPassword?: boolean;
+    setorId?: boolean;
+    terms?: boolean;
+  }>({});
   const [rememberMe, setRememberMe] = useState(true);
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -42,7 +55,7 @@ const AuthPg: React.FC = () => {
         setSectors(data);
       } catch (err: any) {
         console.error('Erro ao carregar setores:', err);
-        setSectorsError('Erro ao carregar setores. Tente recarregar a página.');
+        setSectorsError(ERROR_MESSAGES.DATA.LOAD_SECTORS_FAILED);
       } finally {
         setLoadingSectors(false);
       }
@@ -60,11 +73,48 @@ const AuthPg: React.FC = () => {
     setFieldErrors(prev => ({ ...prev, [name]: false }));
   };
 
+  const clearMessages = () => {
+    setError('');
+    setFieldErrors({});
+  };
+
+  const showError = (message: string) => {
+    setError(message);
+    setErrorType('error');
+  };
+
+  const showSuccess = (message: string) => {
+    setError(message);
+    setErrorType('success');
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setFieldErrors({});
+    clearMessages();
+
+    const emailError = validateField('email', formData.email);
+    const passwordError = validateField('password', formData.password);
+
+    if (formData.email === '' && formData.password === '') {
+      showError('Preencha todos os campos.');
+      setFieldErrors({
+        email: true,
+        password: true,
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (emailError || passwordError) {
+      showError(emailError || passwordError || ERROR_MESSAGES.VALIDATION.FIELD_REQUIRED);
+      setFieldErrors({
+        email: !!emailError,
+        password: !!passwordError,
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       await loginUser({
@@ -72,14 +122,15 @@ const AuthPg: React.FC = () => {
         password: formData.password,
       }, rememberMe);
 
-      updateAuth(); // Atualiza o estado de autenticação imediatamente
-
-      alert('Login realizado com sucesso!');
-      navigate('/kanbanBoard');
+      updateAuth();
+      showSuccess(SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS);
+      
+      setTimeout(() => {
+        navigate('/kanbanBoard');
+      }, 1000);
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Credenciais inválidas. Verifique e-mail e senha.';
-      setError(message);
-      alert(message);
+      const message = err.response?.data?.message || ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS;
+      showError(message);
 
       setFieldErrors({
         email: true,
@@ -93,22 +144,45 @@ const AuthPg: React.FC = () => {
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    clearMessages();
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem');
+    const nameError = validateField('name', formData.name);
+    const emailError = validateField('email', formData.email);
+    const passwordError = validateField('password', formData.password);
+    const confirmError = formData.password !== formData.confirmPassword ? ERROR_MESSAGES.VALIDATION.PASSWORD_MISMATCH : null;
+    const sectorError = validateField('setorId', formData.setorId);
+    const termsError = !termsAgreed ? 'Você deve concordar com os termos de uso e política de privacidade.' : null;
+
+    if (
+      formData.name === '' &&
+      formData.email === '' &&
+      formData.password === '' &&
+      formData.confirmPassword === '' &&
+      formData.setorId === 0
+    ) {
+      showError('Preencha todos os campos.');
+      setFieldErrors({
+        name: true,
+        email: true,
+        password: true,
+        confirmPassword: true,
+        setorId: true,
+        terms: false,
+      });
       setLoading(false);
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.setorId === 0) {
-      setError('Por favor, selecione um setor');
+    if (nameError || emailError || passwordError || confirmError || sectorError || termsError) {
+      showError(nameError || emailError || passwordError || confirmError || sectorError || termsError || ERROR_MESSAGES.VALIDATION.FIELD_REQUIRED);
+      setFieldErrors({
+        name: !!nameError,
+        email: !!emailError,
+        password: !!passwordError,
+        confirmPassword: !!confirmError,
+        setorId: !!sectorError,
+        terms: !!termsError,
+      });
       setLoading(false);
       return;
     }
@@ -122,42 +196,46 @@ const AuthPg: React.FC = () => {
         setorId: formData.setorId,
       });
 
-      updateAuth(); // Atualiza após registro, caso logue automaticamente
-
-      alert('Cadastro realizado com sucesso! Faça login.');
-      setShowLogin(true);
-      setFormData(prev => ({
-        ...prev,
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        setorId: 0,
-      }));
+      updateAuth();
+      showSuccess(SUCCESS_MESSAGES.AUTH.REGISTRATION_SUCCESS);
+      
+      setTimeout(() => {
+        setShowLogin(true);
+        setFormData(prev => ({
+          ...prev,
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          setorId: 0,
+        }));
+        setTermsAgreed(false);
+      }, 2000);
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Erro ao criar conta. Tente novamente.';
-      setError(message);
-      alert(message);
+      const message = getErrorMessage(err) || ERROR_MESSAGES.AUTH.REGISTRATION_FAILED;
+      showError(message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRecoverPassword = async () => {
-    if (!formData.email) {
-      setError('Por favor, insira seu e-mail');
+    const emailError = validateField('email', formData.email);
+    
+    if (emailError) {
+      showError(emailError);
       return;
     }
 
     setLoading(true);
-    setError('');
+    clearMessages();
+    
     try {
       await recoverPassword(formData.email);
-      alert('Instruções de recuperação enviadas para seu e-mail!');
+      showSuccess(SUCCESS_MESSAGES.AUTH.PASSWORD_RECOVERY_SENT);
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Erro ao recuperar senha.';
-      setError(message);
-      alert(message);
+      const message = getErrorMessage(err) || ERROR_MESSAGES.AUTH.PASSWORD_RECOVERY_FAILED;
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -214,8 +292,7 @@ const AuthPg: React.FC = () => {
             className={`auth-tab ${showLogin ? 'active' : ''}`}
             onClick={() => {
               setShowLogin(true);
-              setError('');
-              setFieldErrors({});
+              clearMessages();
             }}
             type="button"
           >
@@ -225,7 +302,7 @@ const AuthPg: React.FC = () => {
             className={`auth-tab ${!showLogin ? 'active' : ''}`}
             onClick={() => {
               setShowLogin(false);
-              setError('');
+              clearMessages();
             }}
             type="button"
           >
@@ -234,35 +311,19 @@ const AuthPg: React.FC = () => {
         </div>
 
         {error && (
-          <div
-            style={{
-              padding: '12px',
-              margin: '16px 0',
-              backgroundColor: '#fee',
-              border: '1px solid #fcc',
-              borderRadius: '8px',
-              color: '#c33',
-              fontSize: '14px',
-            }}
-          >
-            {error}
-          </div>
+          <ErrorMessage 
+            message={error} 
+            type={errorType}
+            onClose={clearMessages}
+          />
         )}
 
         {sectorsError && !showLogin && (
-          <div
-            style={{
-              padding: '12px',
-              margin: '16px 0',
-              backgroundColor: '#fee',
-              border: '1px solid #fcc',
-              borderRadius: '8px',
-              color: '#c33',
-              fontSize: '14px',
-            }}
-          >
-            {sectorsError}
-          </div>
+          <ErrorMessage 
+            message={sectorsError} 
+            type="error"
+            onClose={() => setSectorsError('')}
+          />
         )}
 
         {showLogin ? (
@@ -272,7 +333,7 @@ const AuthPg: React.FC = () => {
               <p className="form-subtitle">Entre com suas credenciais para acessar o sistema</p>
             </div>
 
-            <form className="auth-form" onSubmit={handleLoginSubmit}>
+            <form className="auth-form" onSubmit={handleLoginSubmit} noValidate>
               <div className="form-group">
                 <label className="form-label">
                   <i className="bx bx-envelope"></i> E-mail
@@ -280,16 +341,11 @@ const AuthPg: React.FC = () => {
                 <input
                   type="email"
                   name="email"
-                  className="form-input"
+                  className={fieldErrors.email ? 'form-input error' : 'form-input'}
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
-                  style={{
-                    borderColor: fieldErrors.email ? '#ef4444' : '',
-                    boxShadow: fieldErrors.email ? '0 0 0 1px #ef4444' : '',
-                  }}
                 />
               </div>
 
@@ -300,16 +356,11 @@ const AuthPg: React.FC = () => {
                 <input
                   type="password"
                   name="password"
-                  className="form-input"
+                  className={fieldErrors.password ? 'form-input error' : 'form-input'}
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
-                  style={{
-                    borderColor: fieldErrors.password ? '#ef4444' : '',
-                    boxShadow: fieldErrors.password ? '0 0 0 1px #ef4444' : '',
-                  }}
                 />
               </div>
 
@@ -341,7 +392,7 @@ const AuthPg: React.FC = () => {
               <p className="form-subtitle">Preencha os dados para começar a usar o sistema</p>
             </div>
 
-            <form className="auth-form" onSubmit={handleSignupSubmit}>
+            <form className="auth-form" onSubmit={handleSignupSubmit} noValidate>
               <div className="form-group">
                 <label className="form-label">
                   <i className="bx bx-user"></i> Nome Completo
@@ -349,11 +400,10 @@ const AuthPg: React.FC = () => {
                 <input
                   type="text"
                   name="name"
-                  className="form-input"
+                  className={fieldErrors.name ? 'form-input error' : 'form-input'}
                   placeholder="Seu nome completo"
                   value={formData.name}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
                 />
               </div>
@@ -365,11 +415,10 @@ const AuthPg: React.FC = () => {
                 <input
                   type="email"
                   name="email"
-                  className="form-input"
+                  className={fieldErrors.email ? 'form-input error' : 'form-input'}
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
                 />
               </div>
@@ -381,11 +430,10 @@ const AuthPg: React.FC = () => {
                 <input
                   type="password"
                   name="password"
-                  className="form-input"
+                  className={fieldErrors.password ? 'form-input error' : 'form-input'}
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
                   minLength={6}
                 />
@@ -398,11 +446,10 @@ const AuthPg: React.FC = () => {
                 <input
                   type="password"
                   name="confirmPassword"
-                  className="form-input"
+                  className={fieldErrors.confirmPassword ? 'form-input error' : 'form-input'}
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
                   minLength={6}
                 />
@@ -417,7 +464,6 @@ const AuthPg: React.FC = () => {
                   className="form-input"
                   value={formData.role}
                   onChange={handleInputChange}
-                  required
                   disabled={loading}
                 >
                   <option value="COLABORADOR">Colaborador</option>
@@ -432,10 +478,9 @@ const AuthPg: React.FC = () => {
                 </label>
                 <select
                   name="setorId"
-                  className="form-input"
+                  className={fieldErrors.setorId ? 'form-input error' : 'form-input'}
                   value={formData.setorId}
                   onChange={handleInputChange}
-                  required
                   disabled={loading || loadingSectors}
                 >
                   <option value="0">
@@ -449,9 +494,14 @@ const AuthPg: React.FC = () => {
                 </select>
               </div>
 
-              <div className="form-terms">
+              <div className={fieldErrors.terms ? 'form-terms error' : 'form-terms'}>
                 <label className="form-checkbox">
-                  <input type="checkbox" required disabled={loading} />
+                  <input 
+                    type="checkbox" 
+                    checked={termsAgreed}
+                    onChange={(e) => setTermsAgreed(e.target.checked)}
+                    disabled={loading} 
+                  />
                   <span>
                     Eu concordo com os{' '}
                     <button

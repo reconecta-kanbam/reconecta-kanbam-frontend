@@ -1,0 +1,94 @@
+.error-message {
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.error-message .icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.error-message .message-content {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.error-message .close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.error-message .close-button:hover {
+  opacity: 1;
+}
+
+/* Estilos para cada tipo de mensagem */
+.error-message.error {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+}
+
+.error-message.error .icon,
+.error-message.error .close-button {
+  color: #c33;
+}
+
+.error-message.warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffd966;
+  color: #856404;
+}
+
+.error-message.warning .icon,
+.error-message.warning .close-button {
+  color: #856404;
+}
+
+.error-message.info {
+  background-color: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  color: #004085;
+}
+
+.error-message.info .icon,
+.error-message.info .close-button {
+  color: #004085;
+}
+
+.error-message.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.error-message.success .icon,
+.error-message.success .close-button {
+  color: #155724;
+}
+
+/* Animação slideDown */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

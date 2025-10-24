@@ -9,6 +9,7 @@
 @import "./base/reset";
 @import "./base/grid";
 @import "./base/font";
+@import "./base/errorMessage";
 
 /*=============== Global ===============*/
 @import "./global/header";
