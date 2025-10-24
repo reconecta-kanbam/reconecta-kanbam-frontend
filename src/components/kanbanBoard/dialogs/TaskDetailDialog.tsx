@@ -52,7 +52,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
           <div className="space-y-6">
             <div className="bg-[#4c010c] p-4 rounded-xl text-white">
               <h3 className="font-bold text-lg">{ocorrencia.titulo}</h3>
-              <p className="text-sm mt-1">{ocorrencia.descricao}</p>
+              <p className="text-sm mt-1 text-white">{ocorrencia.descricao}</p>
             </div>
 
             {/* Status, Setor, Criado em */}

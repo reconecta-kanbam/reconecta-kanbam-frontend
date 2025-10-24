@@ -3,6 +3,7 @@
 import { Trash2, Pencil } from "lucide-react";
 import { deleteOcorrencia } from "../../api/services/ocorrencias";
 import { useState } from "react";
+import { toast } from "sonner";
 import ConfirmDialog from "../ui/ConfirmDialog";
 
 interface OcorrenciaActionsProps {
@@ -27,11 +28,11 @@ const OcorrenciaActions: React.FC<OcorrenciaActionsProps> = ({
     try {
       setLoading(true);
       await deleteOcorrencia(id);
-      alert("✅ Ocorrência deletada com sucesso!");
+      toast.success("Ocorrência deletada com sucesso!");
       if (onDeleted) onDeleted(id);
     } catch (error) {
       console.error("Erro ao deletar ocorrência:", error);
-      alert("❌ Erro ao deletar ocorrência");
+      toast.error("Erro ao deletar ocorrência");
     } finally {
       setLoading(false);
       setShowConfirmDialog(false);
