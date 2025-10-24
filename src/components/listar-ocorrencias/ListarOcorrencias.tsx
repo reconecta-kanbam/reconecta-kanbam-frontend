@@ -5,7 +5,17 @@ import { useEffect, useState } from "react";
 import type { Ocorrencia } from "../../api/types/ocorrencia";
 import api from "../../api/api";
 import ENDPOINTS from "../../api/endpoints";
-import { Search, X, Plus, Calendar, Layers, CheckCircle2 } from "lucide-react";
+import {
+  Search,
+  X,
+  Plus,
+  Calendar,
+  Layers,
+  CheckCircle2,
+  User,
+  File,
+  PenBox,
+} from "lucide-react";
 
 interface TaskDetailDialogProps {
   isOpen: boolean;
@@ -99,19 +109,72 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 </p>
               ) : (
                 ocorrencia.subtarefas.map((subtask) => (
-                  <div
+                  <details
                     key={subtask.id}
-                    className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
+                    className="group bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl hover:shadow-md transition-all"
                   >
-                    <h4 className="font-semibold text-gray-800 mb-1">
-                      {subtask.titulo}
-                    </h4>
-                    {subtask.descricao && (
-                      <p className="text-gray-600 text-sm">
-                        {subtask.descricao}
-                      </p>
-                    )}
-                  </div>
+                    <summary className="p-4 cursor-pointer list-none flex justify-between items-center">
+                      <h4 className="font-semibold text-gray-800">
+                        {subtask.titulo}
+                      </h4>
+                      <div className="transform transition-transform group-open:rotate-180">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </div>
+                    </summary>
+                    <div className="p-4 pt-0 space-y-3">
+                      {subtask.descricao && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">
+                            Descrição:
+                          </p>
+                          <p className="text-gray-600">{subtask.descricao}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Status:
+                        </p>
+                        <p className="text-gray-600 capitalize">
+                          {subtask.status?.replace(/_/g, " ") || "Não definido"}
+                        </p>
+                      </div>
+                      {subtask.responsavel && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">
+                            Responsável:
+                          </p>
+                          <p className="text-gray-600">
+                            {subtask.responsavel.nome}
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            {subtask.responsavel.email}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Criado em:
+                        </p>
+                        <p className="text-gray-600">
+                          {new Date(subtask.createdAt).toLocaleDateString(
+                            "pt-BR"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </details>
                 ))
               )}
             </div>
@@ -192,7 +255,25 @@ const ListarOcorrencias = () => {
         }
       );
 
-      const createdSubtask = response.data;
+      console.log("API Response:", response.data);
+
+      // Map the response data to match our Subtarefa interface
+      const createdSubtask = {
+        id: response.data.id,
+        titulo: response.data.titulo,
+        descricao: response.data.descricao,
+        status: response.data.status,
+        createdAt: response.data.createdAt,
+        responsavel: response.data.responsavel
+          ? {
+              id: response.data.responsavel.id,
+              nome: response.data.responsavel.nome,
+              email: response.data.responsavel.email,
+            }
+          : undefined,
+      };
+
+      console.log("Mapped Subtask:", createdSubtask);
 
       // Atualiza a ocorrência localmente para não precisar buscar do servidor
       setOcorrencias((prev) =>
@@ -205,6 +286,8 @@ const ListarOcorrencias = () => {
             : ocorrencia
         )
       );
+
+      console.log("Updated Ocorrencias:", ocorrencias);
     } catch (error) {
       console.error("Erro ao adicionar subtarefa:", error);
     }
@@ -275,7 +358,18 @@ const ListarOcorrencias = () => {
                 </div>
 
                 <p className="text-gray-600 mb-4 line-clamp-2">
+                  <PenBox className="w-5 h-5 inline mr-2" />
                   {ocorrencia.descricao}
+                </p>
+
+                <p className="text-gray-600 mb-4 line-clamp-2">
+                  <User className="w-5 h-5 inline mr-2" />
+                  Colaborador: {ocorrencia.colaborador?.nome}
+                </p>
+
+                <p className="text-gray-600 mb-4 line-clamp-2">
+                  <User className="w-5 h-5 inline mr-2" />
+                  Gestor: {ocorrencia.gestor?.nome}
                 </p>
 
                 <div className="flex items-center justify-between">
