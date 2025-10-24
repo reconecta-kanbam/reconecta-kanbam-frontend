@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Plus, FileText, Layers } from "lucide-react";
 
 export default function Occurrences() {
-  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [_ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
