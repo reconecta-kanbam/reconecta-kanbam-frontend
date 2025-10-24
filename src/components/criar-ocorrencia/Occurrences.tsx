@@ -11,7 +11,7 @@ import {
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
-import { Plus, FileText, Layers, List } from "lucide-react";
+import { Plus, FileText, Layers } from "lucide-react";
 
 export default function Occurrences() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
