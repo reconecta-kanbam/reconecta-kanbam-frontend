@@ -55,6 +55,20 @@ export const deleteOcorrencia = async (id: number) => {
   console.log("✅ Ocorrência deletada");
 };
 
+// ✏️ Editar ocorrência
+export const editOcorrencia = async (
+  id: number,
+  data: { titulo: string; descricao: string; setorId: number }
+) => {
+  console.log(`✏️ Editando ocorrência ID ${id}`, data);
+  const response = await api.patch(
+    ENDPOINTS.CREATE_OCORRENCIA + `/${id}`,
+    data
+  );
+  console.log("✅ Ocorrência atualizada:", response.data);
+  return response.data as Ocorrencia;
+};
+
 // 🧩 Subtarefas
 export const createSubtarefa = async (
   ocorrenciaId: number,
