@@ -11,7 +11,6 @@ import {
   Setor,
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
-import { ConfirmDialog } from "../kanbanBoard/dialogs/ConfirmDialog";
 import { toast } from "sonner";
 import { Plus, FileText, Layers } from "lucide-react";
 
