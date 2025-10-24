@@ -391,11 +391,13 @@ const ListarOcorrencias = () => {
                 </div>
                 <OcorrenciaActions
                   id={ocorrencia.id}
-                  onDeleted={(deletedId) =>
+                  onDeleted={(deletedId) => {
                     setOcorrencias((prev) =>
                       prev.filter((o) => o.id !== deletedId)
-                    )
-                  }
+                    );
+                    setIsDialogOpen(false); // fecha modal de detalhes
+                    setSelectedOcorrencia(null);
+                  }}
                 />
               </div>
             ))
