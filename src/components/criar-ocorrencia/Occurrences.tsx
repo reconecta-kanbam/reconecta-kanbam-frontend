@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   createOcorrencia,
   listOcorrencias,
-  deleteOcorrencia,
 } from "../../api/services/ocorrencias";
 import {
   Ocorrencia,
@@ -23,8 +22,6 @@ export default function Occurrences() {
     setorId: 1,
     colaboradorId: 7,
   });
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // 🔹 Carregar ocorrências e setores
   useEffect(() => {
