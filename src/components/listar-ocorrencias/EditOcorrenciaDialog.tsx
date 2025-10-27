@@ -8,7 +8,7 @@ import {
 import { Setor } from "../../api/types/usuario";
 import { editOcorrencia } from "../../api/services/ocorrencias";
 import { getSectors } from "../../api/services/sectors";
-import { Layers } from "lucide-react";
+import { Layers, FileText, AlignLeft } from "lucide-react";
 
 interface EditOcorrenciaDialogProps {
   open: boolean;
@@ -88,7 +88,8 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
         </h2>
 
         <div className="mb-4">
-          <label className="block font-semibold text-gray-800 mb-2">
+          <label className="flex items-center gap-2 font-semibold text-gray-800 mb-2">
+            <FileText className="w-4 h-4 text-[#4c010c]" />
             Título
           </label>
           <input
@@ -101,7 +102,8 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
         </div>
 
         <div className="mb-4">
-          <label className="block font-semibold text-gray-800 mb-2">
+          <label className="flex items-center gap-2 font-semibold text-gray-800 mb-2">
+            <AlignLeft className="w-4 h-4 text-[#4c010c]" />
             Descrição
           </label>
           <textarea
