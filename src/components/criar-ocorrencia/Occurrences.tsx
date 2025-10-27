@@ -6,13 +6,14 @@ import {
   listOcorrencias,
 } from "../../api/services/ocorrencias";
 import { listStatus } from "../../api/services/status";
+import { listUsers } from "../../api/services/usuario";
 import {
   Ocorrencia,
   Setor,
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
-import { Plus, FileText, Layers, Settings } from "lucide-react";
+import { Plus, FileText, Layers, Settings, User } from "lucide-react";
 
 // Tipo para Status
 interface Status {
@@ -22,19 +23,30 @@ interface Status {
   ordem: number;
 }
 
-export default function Occurrences() {
+// Tipo para Usuário
+interface Usuario {
+  id: number;
+  nome: string;
+  email: string;
+  perfil: string;
+  setorId?: number;
+  ativo?: boolean;
+}
+
+export default function CriarOcorrencia() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
-  const [statusList, setStatusList] = useState<Status[]>([]);
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
     descricao: "",
     setorId: 1,
-    colaboradorId: 7,
-    statusId: undefined, // Permitir escolha do status
+    statusId: undefined,
+    colaboradorId: undefined,
   });
+  const [statusList, setStatusList] = useState<Status[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
 
-  // 🔹 Carregar ocorrências, setores e status
+  // 🔹 Carregar ocorrências, setores, status e usuários
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -52,6 +64,10 @@ export default function Occurrences() {
         // Carregar status disponíveis
         const statusData = await listStatus();
         setStatusList(statusData);
+
+        // Carregar usuários disponíveis
+        const usuariosData = await listUsers();
+        setUsuarios(usuariosData);
       } catch (err) {
         console.error("Erro ao carregar dados", err);
       }
@@ -78,7 +94,7 @@ export default function Occurrences() {
         titulo: "",
         descricao: "",
         setorId: setores[0]?.id || 1,
-        colaboradorId: 7,
+        colaboradorId: undefined,
         statusId: undefined, // Reset do status
       });
     } catch (err) {
@@ -183,6 +199,37 @@ export default function Occurrences() {
             </select>
             <p className="text-sm text-gray-600 mt-2">
               Se não selecionado, será usado o status padrão do sistema
+            </p>
+          </div>
+
+          {/* Colaborador Responsável */}
+          <div>
+            <label className="flex items-center gap-2 font-semibold text-gray-800 mb-2 text-lg">
+              <User className="w-5 h-5 text-[#4c010c]" />
+              Colaborador Responsável
+            </label>
+            <select
+              value={form.colaboradorId || ""}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  colaboradorId: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
+                })
+              }
+              className="w-full border-2 border-gray-200 p-4 rounded-xl mt-1 focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all text-gray-800 font-medium cursor-pointer"
+            >
+              <option value="">Selecione um colaborador (opcional)</option>
+              {usuarios.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.nome} - {usuario.email}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-600 mt-2">
+              Se não selecionado, a ocorrência ficará sem responsável
+              inicialmente
             </p>
           </div>
 
