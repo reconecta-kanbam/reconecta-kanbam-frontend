@@ -18,6 +18,39 @@ const KanbanBoard: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Função para formatar o título da coluna (status)
+  const formatColumnTitle = (titulo: string) => {
+    // Se já está formatado corretamente, retorna como está
+    if (titulo.includes(" ") && titulo[0] === titulo[0].toUpperCase()) {
+      return titulo;
+    }
+
+    // Mapeamento de casos especiais comuns
+    const specialCases: Record<string, string> = {
+      em_fila: "Em Fila",
+      em_execucao: "Em Execução",
+      em_andamento: "Em Andamento",
+      aguardando_aprovacao: "Aguardando Aprovação",
+      finalizado: "Finalizado",
+      cancelado: "Cancelado",
+      pendente: "Pendente",
+      concluido: "Concluído",
+      pausado: "Pausado",
+    };
+
+    // Verificar se existe um caso especial
+    const lowerTitle = titulo.toLowerCase();
+    if (specialCases[lowerTitle]) {
+      return specialCases[lowerTitle];
+    }
+
+    // Converter de snake_case/slug para formato legível (fallback)
+    return titulo
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   // 🔹 Carrega os dados de ocorrências como cards
   useEffect(() => {
     const loadKanban = async () => {
@@ -82,7 +115,7 @@ const KanbanBoard: React.FC = () => {
                   >
                     <div className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200">
                       <h3 className="text-xl font-bold text-gray-800">
-                        {col.titulo}
+                        {formatColumnTitle(col.titulo)}
                       </h3>
                       <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
                         {col.cards.length}
