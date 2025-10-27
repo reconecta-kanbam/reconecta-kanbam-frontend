@@ -92,16 +92,19 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
         // Carregar setores
         const setoresData = await getSectors();
         setSetores(setoresData);
+        console.log("🏢 Setores carregados:", setoresData);
 
         // Carregar usuários
         const usuariosData = await listUsers();
         setUsuarios(usuariosData);
+        console.log("👥 Usuários carregados:", usuariosData);
 
         // Carregar status
         const statusData = await listStatus();
         setStatusList(statusData);
+        console.log("📊 Status carregados:", statusData);
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        console.error("❌ Erro ao carregar dados:", error);
         // Fallback para setores hardcoded caso a API falhe
         setSetores([
           { id: 1, nome: "TI" },
@@ -116,11 +119,13 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
         ]);
 
         // Fallback para status
-        setStatusList([
+        const fallbackStatus = [
           { id: 1, nome: "em_fila", descricao: "Em Fila" },
           { id: 2, nome: "em_andamento", descricao: "Em Andamento" },
           { id: 3, nome: "concluido", descricao: "Concluído" },
-        ]);
+        ];
+        setStatusList(fallbackStatus);
+        console.log("🔄 Usando status fallback:", fallbackStatus);
       }
     };
     loadData();
@@ -139,6 +144,15 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
   const handleSave = async () => {
     if (!ocorrencia || setorId === null) return;
     setLoading(true);
+
+    console.log("🚀 Iniciando salvamento da ocorrência:", {
+      ocorrenciaId: ocorrencia.id,
+      statusAtual: ocorrencia.status,
+      statusSelecionado: statusId,
+      colaboradorAtual: ocorrencia.colaborador,
+      colaboradorSelecionado: colaboradorId,
+    });
+
     try {
       // 1. Atualizar dados básicos da ocorrência
       const payload: CreateOcorrenciaRequest = {
@@ -146,24 +160,73 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
         descricao,
         setorId,
       };
+      console.log("📝 Atualizando dados básicos:", payload);
       let updated = await editOcorrencia(ocorrencia.id, payload);
+      console.log("✅ Dados básicos atualizados:", updated);
 
       // 2. Atribuir colaborador se foi selecionado e é diferente do atual
       if (colaboradorId && colaboradorId !== ocorrencia.colaborador?.id) {
+        console.log(`👤 Atribuindo colaborador ${colaboradorId}`);
         updated = await assignOcorrencia(ocorrencia.id, { colaboradorId });
+        console.log("✅ Colaborador atribuído:", updated);
       }
 
       // 3. Atualizar status se foi selecionado e é diferente do atual
       if (statusId && statusId !== ocorrencia.status?.id) {
-        updated = await updateStatusOcorrencia(ocorrencia.id, { statusId });
+        console.log(
+          `🔄 Atualizando status de ${ocorrencia.status?.id} para ${statusId}`
+        );
+
+        try {
+          // Primeira tentativa: endpoint específico de status
+          const statusResult = await updateStatusOcorrencia(ocorrencia.id, {
+            statusId,
+          });
+          if (statusResult) {
+            updated = statusResult;
+            console.log(
+              "✅ Status atualizado via endpoint específico:",
+              updated
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "⚠️ Endpoint específico falhou, tentando via edição geral"
+          );
+
+          // Fallback: tentar via endpoint de edição geral
+          try {
+            const fallbackPayload = {
+              titulo: updated.titulo,
+              descricao: updated.descricao,
+              setorId: updated.setor?.id || setorId,
+              statusId: statusId, // incluir statusId no payload geral
+            };
+            const editResult = await editOcorrencia(
+              ocorrencia.id,
+              fallbackPayload
+            );
+            if (editResult) {
+              updated = editResult;
+              console.log("✅ Status atualizado via edição geral:", updated);
+            }
+          } catch (fallbackError) {
+            console.error("❌ Ambos os métodos falharam:", fallbackError);
+            throw fallbackError;
+          }
+        }
       }
 
+      console.log("🎉 Salvamento concluído. Resultado final:", updated);
       onUpdated?.(updated);
       onOpenChange(false);
       alert("✅ Ocorrência atualizada com sucesso!");
     } catch (error) {
-      console.error("Erro ao atualizar ocorrência:", error);
-      alert("❌ Erro ao atualizar ocorrência");
+      console.error("❌ Erro ao atualizar ocorrência:", error);
+      alert(
+        "❌ Erro ao atualizar ocorrência: " +
+          (error as any)?.response?.data?.message || (error as any)?.message
+      );
     } finally {
       setLoading(false);
     }
@@ -254,9 +317,18 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
           </label>
           <select
             value={statusId || ""}
-            onChange={(e) =>
-              setStatusId(e.target.value ? Number(e.target.value) : null)
-            }
+            onChange={(e) => {
+              const newStatusId = e.target.value
+                ? Number(e.target.value)
+                : null;
+              console.log(
+                "🔄 Status selecionado:",
+                newStatusId,
+                "Valor anterior:",
+                statusId
+              );
+              setStatusId(newStatusId);
+            }}
             className="w-full border-2 border-gray-200 p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all text-gray-800 cursor-pointer"
           >
             <option value="">Selecione um status</option>

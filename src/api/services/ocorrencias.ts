@@ -58,14 +58,31 @@ export const deleteOcorrencia = async (id: number) => {
 // ✏️ Editar ocorrência
 export const editOcorrencia = async (
   id: number,
-  data: { titulo: string; descricao: string; setorId: number }
+  data: {
+    titulo: string;
+    descricao: string;
+    setorId: number;
+    statusId?: number; // Adicionar statusId como opcional
+  }
 ) => {
   console.log(`✏️ Editando ocorrência ID ${id}`, data);
-  const response = await api.patch(
-    ENDPOINTS.CREATE_OCORRENCIA + `/${id}`,
-    data
-  );
+  const response = await api.patch(ENDPOINTS.EDIT_OCORRENCIA(id), data);
   console.log("✅ Ocorrência atualizada:", response.data);
+
+  // Debug: verificar se o status foi atualizado
+  if (data.statusId) {
+    const statusAntes = data.statusId;
+    const statusDepois = response.data.status?.id;
+    console.log(
+      `🔍 Status solicitado: ${statusAntes}, Status retornado: ${statusDepois}`
+    );
+
+    if (statusAntes !== statusDepois) {
+      console.warn("⚠️ ATENÇÃO: Status não foi atualizado pelo backend!");
+    } else {
+      console.log("✅ Status atualizado corretamente!");
+    }
+  }
   return response.data as Ocorrencia;
 };
 
@@ -121,13 +138,69 @@ export const updateStatusOcorrencia = async (
   id: number,
   data: { statusId: number }
 ) => {
+  const endpoint = ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id);
   console.log(
     `🔄 Atualizando status da ocorrência ${id} para status ${data.statusId}`
   );
-  const response = await api.patch(
-    ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id),
-    data
-  );
-  console.log("✅ Status da ocorrência atualizado:", response.data);
-  return response.data as Ocorrencia;
+  console.log(`📍 Endpoint: ${endpoint}`);
+
+  // Tentar diferentes formatos de payload
+  const basePayloads = [
+    { statusId: data.statusId }, // formato camelCase
+    { status_id: data.statusId }, // formato snake_case
+    { status: { id: data.statusId } }, // formato objeto aninhado
+    { statusChave: data.statusId }, // formato com chave numérica
+  ];
+
+  // Tentar formatos com chave string baseados nos status disponíveis
+  const statusChaveMap: Record<number, string> = {
+    1: "em_atribuicao",
+    2: "em_fila",
+    3: "desenvolvimento",
+    4: "aprovacao",
+    5: "documentacao",
+    6: "entregue",
+    7: "em_execucao",
+  };
+
+  const statusChave = statusChaveMap[data.statusId];
+  const chavePayloads = statusChave
+    ? [
+        { statusChave: statusChave }, // formato com chave string
+        { status_chave: statusChave }, // formato snake_case chave
+        { chave: statusChave }, // formato direto chave
+        { status: statusChave }, // formato status como string
+        { status: { id: data.statusId, chave: statusChave } }, // formato completo
+      ]
+    : [];
+
+  const payloads = [...basePayloads, ...chavePayloads];
+
+  for (let i = 0; i < payloads.length; i++) {
+    const payload = payloads[i];
+    console.log(`🔄 Tentativa ${i + 1}/${payloads.length} - Payload:`, payload);
+
+    try {
+      const response = await api.patch(endpoint, payload);
+      console.log("✅ Status da ocorrência atualizado:", response.data);
+      return response.data as Ocorrencia;
+    } catch (error: any) {
+      console.error(
+        `❌ Tentativa ${i + 1} falhou:`,
+        error.response?.data || error.message
+      );
+
+      // Se não é a última tentativa, continua
+      if (i < payloads.length - 1) {
+        console.log(`🔄 Tentando próximo formato...`);
+        continue;
+      }
+
+      // Se chegou aqui, todas as tentativas falharam
+      console.error("❌ Todas as tentativas falharam");
+      console.error("📍 Endpoint usado:", endpoint);
+      console.error("📦 Payloads testados:", payloads);
+      throw error;
+    }
+  }
 };
