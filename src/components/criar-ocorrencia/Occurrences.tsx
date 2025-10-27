@@ -5,25 +5,36 @@ import {
   createOcorrencia,
   listOcorrencias,
 } from "../../api/services/ocorrencias";
+import { listStatus } from "../../api/services/status";
 import {
   Ocorrencia,
   Setor,
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
-import { Plus, FileText, Layers } from "lucide-react";
+import { Plus, FileText, Layers, Settings } from "lucide-react";
+
+// Tipo para Status
+interface Status {
+  id: number;
+  nome: string;
+  chave: string;
+  ordem: number;
+}
 
 export default function Occurrences() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
+  const [statusList, setStatusList] = useState<Status[]>([]);
   const [form, setForm] = useState<CreateOcorrenciaRequest>({
     titulo: "",
     descricao: "",
     setorId: 1,
     colaboradorId: 7,
+    statusId: undefined, // Permitir escolha do status
   });
 
-  // 🔹 Carregar ocorrências e setores
+  // 🔹 Carregar ocorrências, setores e status
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -37,6 +48,10 @@ export default function Occurrences() {
           { id: 4, nome: "Operações" },
         ];
         setSetores(setoresData);
+
+        // Carregar status disponíveis
+        const statusData = await listStatus();
+        setStatusList(statusData);
       } catch (err) {
         console.error("Erro ao carregar dados", err);
       }
@@ -64,6 +79,7 @@ export default function Occurrences() {
         descricao: "",
         setorId: setores[0]?.id || 1,
         colaboradorId: 7,
+        statusId: undefined, // Reset do status
       });
     } catch (err) {
       console.error(err);
@@ -140,6 +156,34 @@ export default function Occurrences() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="flex items-center gap-2 font-semibold text-gray-800 mb-2 text-lg">
+              <Settings className="w-5 h-5 text-[#4c010c]" />
+              Status
+            </label>
+            <select
+              value={form.statusId || ""}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  statusId: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+              className="w-full border-2 border-gray-200 p-4 rounded-xl mt-1 focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all text-gray-800 font-medium cursor-pointer"
+            >
+              <option value="">Selecione um status (opcional)</option>
+              {statusList.map((status) => (
+                <option key={status.id} value={status.id}>
+                  {status.nome}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-600 mt-2">
+              Se não selecionado, será usado o status padrão do sistema
+            </p>
           </div>
 
           {/* Botão de Submit */}

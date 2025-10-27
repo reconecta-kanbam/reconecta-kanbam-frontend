@@ -65,6 +65,7 @@ export interface CreateOcorrenciaRequest {
   setorId: number;
   colaboradorId?: number;
   colaboradorNome?: string;
+  statusId?: number; // Adicionado para permitir escolha do status na criação
 }
 
 export interface Setor {
