@@ -16,15 +16,19 @@ const KanbanBoard: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // 🔹 Carrega os dados de ocorrências como cards
   useEffect(() => {
     const loadKanban = async () => {
       try {
+        setLoading(true);
         const data = await getKanbanData();
         setColumns(data);
       } catch (err) {
         console.error("Erro ao carregar Kanban:", err);
+      } finally {
+        setLoading(false);
       }
     };
     loadKanban();
@@ -43,7 +47,25 @@ const KanbanBoard: React.FC = () => {
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Kanban Board</h1>
       </div>
 
-      {columns.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-gray-200 border-t-[#4c010c] rounded-full animate-spin"></div>
+              <div
+                className="w-12 h-12 border-4 border-transparent border-t-red-300 rounded-full animate-spin absolute top-2 left-2"
+                style={{ animationDuration: "0.8s" }}
+              ></div>
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                Carregando...
+              </h2>
+              <p className="text-gray-500">Buscando suas ocorrências</p>
+            </div>
+          </div>
+        </div>
+      ) : columns.length > 0 ? (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="flex gap-6 px-6 overflow-x-auto pb-4">
             {columns.map((col) => (

@@ -16,14 +16,18 @@ const ListarOcorrencias = () => {
     useState<Ocorrencia | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editOcorrenciaId, setEditOcorrenciaId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchOcorrencias = async () => {
       try {
+        setLoading(true);
         const response = await api.get(ENDPOINTS.LIST_OCORRENCIAS);
         setOcorrencias(response.data);
       } catch (error) {
         console.error("Erro ao buscar ocorrências:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchOcorrencias();
@@ -67,11 +71,26 @@ const ListarOcorrencias = () => {
     }
   };
 
-  const filteredOcorrencias = ocorrencias.filter(
-    (o) =>
-      o.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOcorrencias = ocorrencias
+    .filter(
+      (o) =>
+        o.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!searchTerm) return 0; // Sem ordenação se não há busca
+
+      const searchLower = searchTerm.toLowerCase();
+      const aTitleMatch = a.titulo.toLowerCase().includes(searchLower);
+      const bTitleMatch = b.titulo.toLowerCase().includes(searchLower);
+
+      // Priorizar matches no título sobre matches na descrição
+      if (aTitleMatch && !bTitleMatch) return -1;
+      if (!aTitleMatch && bTitleMatch) return 1;
+
+      // Se ambos ou nenhum match no título, manter ordem original
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50">
@@ -84,99 +103,123 @@ const ListarOcorrencias = () => {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="mb-8 relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Pesquisar ocorrências..."
-            className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all shadow-sm hover:shadow-md bg-white"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {/* Cards */}
-        <div className="grid gap-5">
-          {filteredOcorrencias.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
-              <p className="text-gray-600 text-lg font-medium">
-                Nenhuma ocorrência encontrada
-              </p>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-gray-200 border-t-[#4c010c] rounded-full animate-spin"></div>
+                <div
+                  className="w-12 h-12 border-4 border-transparent border-t-red-300 rounded-full animate-spin absolute top-2 left-2"
+                  style={{ animationDuration: "0.8s" }}
+                ></div>
+              </div>
+              <div className="text-center">
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                  Carregando...
+                </h2>
+                <p className="text-gray-500">Buscando as ocorrências</p>
+              </div>
             </div>
-          ) : (
-            filteredOcorrencias.map((ocorrencia) => (
-              <div
-                key={ocorrencia.id}
-                className="bg-white border-2 border-gray-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:border-[#4c010c]"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-800">
-                    {ocorrencia.titulo}
-                  </h3>
-                  <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-xs font-semibold border border-yellow-300">
-                    #{ocorrencia.id}
-                  </span>
+          </div>
+        ) : (
+          <>
+            {/* Search */}
+            <div className="mb-8 relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Pesquisar ocorrências..."
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all shadow-sm hover:shadow-md bg-white"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            {/* Cards */}
+            <div className="grid gap-5">
+              {filteredOcorrencias.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
+                  <p className="text-gray-600 text-lg font-medium">
+                    Nenhuma ocorrência encontrada
+                  </p>
                 </div>
-
-                <p className="text-gray-600 mb-2 line-clamp-2">
-                  {ocorrencia.descricao}
-                </p>
-                <p className="text-gray-600 mb-2 line-clamp-2">
-                  Colaborador: {ocorrencia.colaborador?.nome}
-                </p>
-                <p className="text-gray-600 mb-2 line-clamp-2">
-                  Gestor: {ocorrencia.gestor?.nome}
-                </p>
-
-                <div className="flex justify-between items-center mt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-[#4c010c]/10 text-[#4c010c] px-3 py-1 rounded-full border border-[#4c010c]/20">
-                      <Layers className="w-4 h-4" />
-                      <span className="font-medium">
-                        {ocorrencia.subtarefas.length} subtarefas
+              ) : (
+                filteredOcorrencias.map((ocorrencia) => (
+                  <div
+                    key={ocorrencia.id}
+                    className="bg-white border-2 border-gray-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:border-[#4c010c]"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-xl font-bold text-gray-800">
+                        {ocorrencia.titulo}
+                      </h3>
+                      <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-xs font-semibold border border-yellow-300">
+                        #{ocorrencia.id}
                       </span>
                     </div>
-                  </div>
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {new Date(ocorrencia.createdAt).toLocaleDateString("pt-BR")}
-                  </div>
-                </div>
 
-                {/* Ações */}
-                <div className="flex justify-end gap-2 mt-4">
-                  {/* Ver detalhes */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOcorrencia(ocorrencia);
-                      setIsDialogOpen(true);
-                    }}
-                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-                  >
-                    <Eye className="w-5 h-5 text-gray-600" />
-                  </button>
+                    <p className="text-gray-600 mb-2 line-clamp-2">
+                      {ocorrencia.descricao}
+                    </p>
+                    <p className="text-gray-600 mb-2 line-clamp-2">
+                      Colaborador: {ocorrencia.colaborador?.nome}
+                    </p>
+                    <p className="text-gray-600 mb-2 line-clamp-2">
+                      Gestor: {ocorrencia.gestor?.nome}
+                    </p>
 
-                  {/* Deletar */}
-                  <OcorrenciaActions
-                    id={ocorrencia.id}
-                    onDeleted={(deletedId) => {
-                      setOcorrencias((prev) =>
-                        prev.filter((o) => o.id !== deletedId)
-                      );
-                      if (selectedOcorrencia?.id === deletedId) {
-                        setIsDialogOpen(false);
-                        setSelectedOcorrencia(null);
-                      }
-                    }}
-                    onEdit={(id) => setEditOcorrenciaId(id)}
-                  />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-[#4c010c]/10 text-[#4c010c] px-3 py-1 rounded-full border border-[#4c010c]/20">
+                          <Layers className="w-4 h-4" />
+                          <span className="font-medium">
+                            {ocorrencia.subtarefas.length} subtarefas
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500 flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(ocorrencia.createdAt).toLocaleDateString(
+                          "pt-BR"
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="flex justify-end gap-2 mt-4">
+                      {/* Ver detalhes */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedOcorrencia(ocorrencia);
+                          setIsDialogOpen(true);
+                        }}
+                        className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                      >
+                        <Eye className="w-5 h-5 text-gray-600" />
+                      </button>
+
+                      {/* Deletar */}
+                      <OcorrenciaActions
+                        id={ocorrencia.id}
+                        onDeleted={(deletedId) => {
+                          setOcorrencias((prev) =>
+                            prev.filter((o) => o.id !== deletedId)
+                          );
+                          if (selectedOcorrencia?.id === deletedId) {
+                            setIsDialogOpen(false);
+                            setSelectedOcorrencia(null);
+                          }
+                        }}
+                        onEdit={(id) => setEditOcorrenciaId(id)}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
         {/* Modal de detalhes com formulário de subtarefa */}
         {selectedOcorrencia && (
