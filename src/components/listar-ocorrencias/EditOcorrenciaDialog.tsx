@@ -5,7 +5,10 @@ import {
   Ocorrencia,
   CreateOcorrenciaRequest,
 } from "../../api/types/ocorrencia";
+import { Setor } from "../../api/types/usuario";
 import { editOcorrencia } from "../../api/services/ocorrencias";
+import { getSectors } from "../../api/services/sectors";
+import { Layers } from "lucide-react";
 
 interface EditOcorrenciaDialogProps {
   open: boolean;
@@ -23,7 +26,28 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [setorId, setSetorId] = useState<number | null>(null);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Carregar setores
+  useEffect(() => {
+    const loadSetores = async () => {
+      try {
+        const setoresData = await getSectors();
+        setSetores(setoresData);
+      } catch (error) {
+        console.error("Erro ao carregar setores:", error);
+        // Fallback para setores hardcoded caso a API falhe
+        setSetores([
+          { id: 1, nome: "TI" },
+          { id: 2, nome: "Financeiro" },
+          { id: 3, nome: "RH" },
+          { id: 4, nome: "Operações" },
+        ]);
+      }
+    };
+    loadSetores();
+  }, []);
 
   useEffect(() => {
     if (ocorrencia) {
@@ -58,39 +82,70 @@ const EditOcorrenciaDialog: React.FC<EditOcorrenciaDialogProps> = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white p-6 rounded-xl w-full max-w-lg">
-        <h2 className="text-xl font-bold mb-4">Editar Ocorrência</h2>
-        <input
-          type="text"
-          placeholder="Título"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          className="w-full mb-4 p-3 border rounded"
-        />
-        <textarea
-          placeholder="Descrição"
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-          className="w-full mb-4 p-3 border rounded"
-        />
-        <input
-          type="number"
-          placeholder="Setor ID"
-          value={setorId || ""}
-          onChange={(e) => setSetorId(Number(e.target.value))}
-          className="w-full mb-4 p-3 border rounded"
-        />
-        <div className="flex justify-end gap-3">
+      <div className="bg-white p-8 rounded-2xl w-full max-w-lg shadow-2xl border-2 border-gray-200">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800">
+          Editar Ocorrência
+        </h2>
+
+        <div className="mb-4">
+          <label className="block font-semibold text-gray-800 mb-2">
+            Título
+          </label>
+          <input
+            type="text"
+            placeholder="Digite o título da ocorrência"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            className="w-full border-2 border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block font-semibold text-gray-800 mb-2">
+            Descrição
+          </label>
+          <textarea
+            placeholder="Descreva a ocorrência"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            rows={4}
+            className="w-full border-2 border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all resize-none"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="flex items-center gap-2 font-semibold text-gray-800 mb-2">
+            <Layers className="w-4 h-4 text-[#4c010c]" />
+            Setor
+          </label>
+          <select
+            value={setorId || ""}
+            onChange={(e) => setSetorId(Number(e.target.value))}
+            className="w-full border-2 border-gray-200 p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all text-gray-800 cursor-pointer"
+            required
+          >
+            <option value="">Selecione um setor</option>
+            {setores.map((setor) => (
+              <option key={setor.id} value={setor.id}>
+                {setor.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={() => onOpenChange(false)}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            disabled={
+              loading || !titulo.trim() || !descricao.trim() || !setorId
+            }
+            className="px-6 py-3 bg-[#4c010c] text-white rounded-xl hover:bg-[#6d0210] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Salvando..." : "Salvar"}
           </button>
