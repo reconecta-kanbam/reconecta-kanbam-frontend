@@ -27,16 +27,32 @@ export const createOcorrenciaPublic = async (data: {
   return response.data as Ocorrencia;
 };
 
-// 🟡 Listar ocorrências (com filtros opcionais)
+// 🟡 Listar ocorrências (com filtros avançados)
 export const listOcorrencias = async (filters?: {
   titulo?: string;
   setorId?: number;
+  colaboradorId?: number;
+  statusId?: number;
+  gestorId?: number;
 }) => {
   console.log("📥 Buscando ocorrências com filtros:", filters || {});
+
+  // Filtrar parâmetros vazios
+  const cleanFilters = filters
+    ? Object.fromEntries(
+        Object.entries(filters).filter(
+          ([_, value]) => value !== undefined && value !== null && value !== ""
+        )
+      )
+    : {};
+
   const response = await api.get(ENDPOINTS.LIST_OCORRENCIAS, {
-    params: filters,
+    params: cleanFilters,
   });
-  console.log(`✅ ${response.data.length} ocorrências carregadas`);
+  console.log(
+    `✅ ${response.data.length} ocorrências carregadas com filtros:`,
+    cleanFilters
+  );
   return response.data as Ocorrencia[];
 };
 

@@ -15,6 +15,7 @@ import {
 import { Column, Card } from "../../api/types/kanban";
 import { User, GripVertical, Eye } from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
+import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
 
 const KanbanBoard: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>([]);
@@ -22,6 +23,7 @@ const KanbanBoard: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dragging, setDragging] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>({});
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -85,10 +87,11 @@ const KanbanBoard: React.FC = () => {
   };
 
   // 🔹 Carrega os dados de ocorrências como cards
-  const loadKanban = async () => {
+  const loadKanban = async (currentFilters: FilterOptions = {}) => {
     try {
       setLoading(true);
-      const data = await getKanbanData();
+      console.log("📋 [KANBAN] Carregando com filtros:", currentFilters);
+      const data = await getKanbanData(currentFilters);
 
       // Aplicar mudanças locais salvas (para persistir entre recarregamentos)
       const localChanges = JSON.parse(
@@ -184,11 +187,15 @@ const KanbanBoard: React.FC = () => {
   };
 
   useEffect(() => {
-    loadKanban();
+    loadKanban(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters]);
 
-  // Função robusta para forçar atualização de status
+  // Função para atualizar filtros
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    console.log("🔄 [KANBAN] Filtros atualizados:", newFilters);
+    setFilters(newFilters);
+  }; // Função robusta para forçar atualização de status
   const forceUpdateStatus = async (
     ocorrenciaId: number,
     newStatusId: number,
@@ -489,14 +496,25 @@ const KanbanBoard: React.FC = () => {
           </div>
 
           {/* Botão para limpar mudanças locais */}
-          {/* <button
+          <button
             onClick={clearLocalChanges}
             className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
             title="Limpar mudanças salvas localmente e recarregar do servidor"
           >
             🔄 Resetar
-          </button> */}
+          </button>
         </div>
+      </div>
+
+      {/* Filtros Avançados */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <AdvancedFilters
+          onFiltersChange={handleFiltersChange}
+          showStatusFilter={false} // Não mostrar filtro de status no Kanban (já é visual)
+          showCollaboratorFilter={true}
+          showGestorFilter={true}
+          className="shadow-lg"
+        />
       </div>
 
       {loading ? (

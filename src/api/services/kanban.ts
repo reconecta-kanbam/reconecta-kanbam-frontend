@@ -8,6 +8,9 @@ import { Ocorrencia } from "../types/ocorrencia";
 export const getKanbanData = async (filters?: {
   titulo?: string;
   setorId?: number;
+  colaboradorId?: number;
+  statusId?: number;
+  gestorId?: number;
 }): Promise<Column[]> => {
   console.log("📋 [KANBAN] Buscando ocorrências com filtros:", filters || {});
   const ocorrencias = await listOcorrencias(filters);

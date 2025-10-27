@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { Ocorrencia } from "../../api/types/ocorrencia";
+import { listOcorrencias } from "../../api/services/ocorrencias";
 import api from "../../api/api";
 import ENDPOINTS from "../../api/endpoints";
 import { Search, Eye, Layers, Calendar } from "lucide-react";
 import OcorrenciaActions from "./OcorrenciaActions";
 import TaskDetailDialog from "../kanbanBoard/dialogs/TaskDetailDialog";
 import EditOcorrenciaDialog from "./EditOcorrenciaDialog";
+import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
 
 const ListarOcorrencias = () => {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
@@ -17,21 +19,41 @@ const ListarOcorrencias = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editOcorrenciaId, setEditOcorrenciaId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<FilterOptions>({});
 
-  useEffect(() => {
-    const fetchOcorrencias = async () => {
-      try {
-        setLoading(true);
+  // Função para carregar ocorrências com filtros
+  const fetchOcorrencias = async (currentFilters: FilterOptions = {}) => {
+    try {
+      setLoading(true);
+      console.log("🔍 Carregando ocorrências com filtros:", currentFilters);
+
+      // Usar o serviço com filtros se houver filtros ativos
+      const hasFilters = Object.keys(currentFilters).length > 0;
+
+      if (hasFilters) {
+        const data = await listOcorrencias(currentFilters);
+        setOcorrencias(data);
+      } else {
+        // Fallback para a API direta se não houver filtros
         const response = await api.get(ENDPOINTS.LIST_OCORRENCIAS);
         setOcorrencias(response.data);
-      } catch (error) {
-        console.error("Erro ao buscar ocorrências:", error);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchOcorrencias();
-  }, []);
+    } catch (error) {
+      console.error("Erro ao buscar ocorrências:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOcorrencias(filters);
+  }, [filters]);
+
+  // Função para atualizar filtros
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    console.log("🔄 Filtros atualizados:", newFilters);
+    setFilters(newFilters);
+  };
 
   const handleAddSubtask = async (
     ocorrenciaId: number,
@@ -123,6 +145,15 @@ const ListarOcorrencias = () => {
           </div>
         ) : (
           <>
+            {/* Filtros Avançados */}
+            <AdvancedFilters
+              onFiltersChange={handleFiltersChange}
+              showStatusFilter={true}
+              showCollaboratorFilter={true}
+              showGestorFilter={true}
+              className="mb-6"
+            />
+
             {/* Search */}
             <div className="mb-8 relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
