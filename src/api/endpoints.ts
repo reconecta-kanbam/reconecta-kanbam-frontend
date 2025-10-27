@@ -10,6 +10,19 @@ const ENDPOINTS = {
   LIST_OCORRENCIAS: "/ocorrencias",
   GET_OCORRENCIA_BY_USER: (userId: number) => `/users/${userId}/ocorrencias`,
   DELETE_OCORRENCIA: (id: number) => `/ocorrencias/${id}`,
+  EDIT_OCORRENCIA: (id: number) => `/ocorrencias/${id}`,
+  ASSIGN_OCORRENCIA: (id: number) => `/ocorrencias/${id}/atribuir`,
+  UPDATE_STATUS_OCORRENCIA: (id: number) => `/ocorrencias/${id}/status`,
+
+  // USUÁRIOS
+  LIST_USERS: "/users",
+  CREATE_USER: "/users",
+  UPDATE_USER_WEIGHT: (userId: number) => `/users/${userId}/peso`,
+
+  // STATUS
+  LIST_STATUS: "/status",
+  CREATE_STATUS: "/status",
+  UPDATE_STATUS: (id: number) => `/status/${id}`,
 
   // Subtarefas
   CREATE_SUBTAREFA: (ocorrenciaId: number) =>
