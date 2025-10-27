@@ -489,13 +489,13 @@ const KanbanBoard: React.FC = () => {
           </div>
 
           {/* Botão para limpar mudanças locais */}
-          <button
+          {/* <button
             onClick={clearLocalChanges}
             className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
             title="Limpar mudanças salvas localmente e recarregar do servidor"
           >
             🔄 Resetar
-          </button>
+          </button> */}
         </div>
       </div>
 
