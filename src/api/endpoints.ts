@@ -12,6 +12,7 @@ const ENDPOINTS = {
   DELETE_OCORRENCIA: (id: number) => `/ocorrencias/${id}`,
   EDIT_OCORRENCIA: (id: number) => `/ocorrencias/${id}`,
   ASSIGN_OCORRENCIA: (id: number) => `/ocorrencias/${id}/atribuir`,
+  AUTO_ASSIGN_OCORRENCIA: (id: number) => `/ocorrencias/${id}/atribuir`,
   UPDATE_STATUS_OCORRENCIA: (id: number) => `/ocorrencias/${id}/status`,
 
   // USUÁRIOS

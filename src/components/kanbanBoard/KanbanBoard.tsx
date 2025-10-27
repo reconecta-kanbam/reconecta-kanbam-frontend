@@ -11,6 +11,9 @@ import { getKanbanData } from "../../api/services/kanban";
 import {
   editOcorrencia,
   updateStatusOcorrencia,
+  updateStatusViaDrag,
+  assignOcorrencia,
+  autoAssignOcorrencia,
 } from "../../api/services/ocorrencias";
 import { Column, Card } from "../../api/types/kanban";
 import { User, GripVertical, Eye } from "lucide-react";
@@ -50,7 +53,90 @@ const KanbanBoard: React.FC = () => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
       setNotification({ show: false, message: "", type: "success" });
-    }, 3000);
+    }, 4000);
+  };
+
+  // IMPLEMENTAÇÃO 4.2: Atribuir ocorrência para colaborador específico
+  const handleAssignOcorrencia = async (
+    ocorrenciaId: number,
+    colaboradorId: number
+  ) => {
+    try {
+      console.log(
+        `👤 Atribuindo ocorrência ${ocorrenciaId} para colaborador ${colaboradorId}`
+      );
+
+      const updatedOcorrencia = await assignOcorrencia(ocorrenciaId, {
+        colaboradorId,
+      });
+
+      // Atualizar o estado local
+      setColumns((prevColumns) =>
+        prevColumns.map((column) => ({
+          ...column,
+          cards: column.cards.map((card) =>
+            card.ocorrencia?.id === ocorrenciaId
+              ? { ...card, ocorrencia: updatedOcorrencia }
+              : card
+          ),
+        }))
+      );
+
+      // Atualizar o card selecionado se for o mesmo
+      if (selectedCard?.ocorrencia?.id === ocorrenciaId) {
+        setSelectedCard((prev) =>
+          prev ? { ...prev, ocorrencia: updatedOcorrencia } : null
+        );
+      }
+
+      showNotification(`✅ Ocorrência atribuída com sucesso!`, "success");
+    } catch (error: any) {
+      console.error("Erro ao atribuir ocorrência:", error);
+      const errorMessage =
+        error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(
+        `❌ Erro ao atribuir ocorrência: ${errorMessage}`,
+        "error"
+      );
+    }
+  };
+
+  // IMPLEMENTAÇÃO 4.3: Auto-atribuir ocorrência para o usuário logado
+  const handleAutoAssignOcorrencia = async (ocorrenciaId: number) => {
+    try {
+      console.log(`🤖 Auto-atribuindo ocorrência ${ocorrenciaId}`);
+
+      const updatedOcorrencia = await autoAssignOcorrencia(ocorrenciaId);
+
+      // Atualizar o estado local
+      setColumns((prevColumns) =>
+        prevColumns.map((column) => ({
+          ...column,
+          cards: column.cards.map((card) =>
+            card.ocorrencia?.id === ocorrenciaId
+              ? { ...card, ocorrencia: updatedOcorrencia }
+              : card
+          ),
+        }))
+      );
+
+      // Atualizar o card selecionado se for o mesmo
+      if (selectedCard?.ocorrencia?.id === ocorrenciaId) {
+        setSelectedCard((prev) =>
+          prev ? { ...prev, ocorrencia: updatedOcorrencia } : null
+        );
+      }
+
+      showNotification(`✅ Ocorrência auto-atribuída com sucesso!`, "success");
+    } catch (error: any) {
+      console.error("Erro ao auto-atribuir ocorrência:", error);
+      const errorMessage =
+        error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(
+        `❌ Erro ao auto-atribuir ocorrência: ${errorMessage}`,
+        "error"
+      );
+    }
   };
 
   // Função para formatar o título da coluna (status)
@@ -328,6 +414,10 @@ const KanbanBoard: React.FC = () => {
   const onDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
 
+    // ✨ IMPLEMENTAÇÃO 4.1: DRAG & DROP REAL ✨
+    // Esta função agora utiliza o endpoint PATCH /ocorrencias/:id/status
+    // para atualizar o status das ocorrências via drag and drop
+
     // Se não há destino válido, não faz nada
     if (!destination) {
       console.log("🚫 Drag cancelado - sem destino válido");
@@ -394,7 +484,49 @@ const KanbanBoard: React.FC = () => {
         `🔄 Atualizando status da ocorrência ${draggedCard.ocorrencia.id} para status ${newStatusId}`
       );
 
-      // Usar função robusta que tenta todos os métodos possíveis
+      // IMPLEMENTAÇÃO 4.1: Usar nova API de Drag & Drop
+      try {
+        console.log("🎯 Usando API otimizada para Drag & Drop");
+        const updatedOcorrencia = await updateStatusViaDrag(
+          draggedCard.ocorrencia.id,
+          newStatusId
+        );
+
+        console.log("✅ Status atualizado via drag & drop:", updatedOcorrencia);
+
+        // Atualizar o card na UI com os dados do backend
+        const finalColumns = [...newColumns];
+        const destColIndex = finalColumns.findIndex(
+          (col) => col.id === destination.droppableId
+        );
+        const cardIndex = finalColumns[destColIndex].cards.findIndex(
+          (card) => card.id === draggableId
+        );
+
+        if (cardIndex !== -1) {
+          finalColumns[destColIndex].cards[cardIndex] = {
+            ...finalColumns[destColIndex].cards[cardIndex],
+            ocorrencia: updatedOcorrencia,
+          };
+          setColumns(finalColumns);
+        }
+
+        showNotification(
+          `✅ Card movido para "${formatColumnTitle(
+            destination.droppableId
+          )}" com sucesso!`
+        );
+
+        setDragging(false);
+        return;
+      } catch (error) {
+        console.warn(
+          "⚠️ API direta falhou, tentando método de fallback:",
+          error
+        );
+      }
+
+      // FALLBACK: Usar função robusta que tenta todos os métodos possíveis
       const updatedOcorrencia = await forceUpdateStatus(
         draggedCard.ocorrencia.id,
         newStatusId,
@@ -635,6 +767,8 @@ const KanbanBoard: React.FC = () => {
           open={detailOpen}
           onOpenChange={setDetailOpen}
           ocorrencia={selectedCard.ocorrencia}
+          onAssign={handleAssignOcorrencia}
+          onAutoAssign={handleAutoAssignOcorrencia}
         />
       )}
 

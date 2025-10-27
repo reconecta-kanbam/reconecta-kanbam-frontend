@@ -1,10 +1,27 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Plus, CheckCircle2, Layers, Calendar } from "lucide-react";
+import {
+  X,
+  Plus,
+  CheckCircle2,
+  Layers,
+  Calendar,
+  User,
+  UserPlus,
+} from "lucide-react";
 import type React from "react";
 import type { Ocorrencia } from "../../../api/types/ocorrencia";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { listUsers } from "../../../api/services/usuario";
+
+// Tipo de usuário baseado na interface de colaborador da ocorrência
+interface UserType {
+  id: number;
+  nome: string;
+  email: string;
+  perfil: string;
+}
 
 interface TaskDetailDialogProps {
   open: boolean;
@@ -14,6 +31,8 @@ interface TaskDetailDialogProps {
     ocorrenciaId: number,
     subtask: { titulo: string; descricao: string }
   ) => Promise<void>;
+  onAssign?: (ocorrenciaId: number, colaboradorId: number) => Promise<void>;
+  onAutoAssign?: (ocorrenciaId: number) => Promise<void>;
 }
 
 const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
@@ -21,16 +40,70 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   onOpenChange,
   ocorrencia,
   onAddSubtask,
+  onAssign,
+  onAutoAssign,
 }) => {
   const [newSubtask, setNewSubtask] = useState({
     titulo: "",
     descricao: "",
   });
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [assigningUser, setAssigningUser] = useState(false);
+  const [autoAssigning, setAutoAssigning] = useState(false);
+
+  // Carregar lista de usuários
+  useEffect(() => {
+    const loadUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const userData = await listUsers();
+        setUsers(userData);
+      } catch (error) {
+        console.error("Erro ao carregar usuários:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    if (open) {
+      loadUsers();
+    }
+  }, [open]);
 
   const handleAddSubtask = async () => {
     if (!onAddSubtask) return;
     await onAddSubtask(ocorrencia.id, newSubtask);
     setNewSubtask({ titulo: "", descricao: "" });
+  };
+
+  // Funções de atribuição
+  const handleAssignUser = async () => {
+    if (!selectedUserId || !onAssign) return;
+
+    setAssigningUser(true);
+    try {
+      await onAssign(ocorrencia.id, selectedUserId);
+      setSelectedUserId(null);
+    } catch (error) {
+      console.error("Erro ao atribuir usuário:", error);
+    } finally {
+      setAssigningUser(false);
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    if (!onAutoAssign) return;
+
+    setAutoAssigning(true);
+    try {
+      await onAutoAssign(ocorrencia.id);
+    } catch (error) {
+      console.error("Erro ao auto-atribuir:", error);
+    } finally {
+      setAutoAssigning(false);
+    }
   };
 
   return (
@@ -94,14 +167,93 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </div>
             </div>
 
+            {/* IMPLEMENTAÇÃO 4.2 e 4.3: Atribuição de Ocorrências */}
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <User className="w-5 h-5 text-[#4c010c]" />
+                Atribuição
+              </h3>
+
+              {/* Colaborador atual */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-xl">
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Colaborador Atual:
+                </p>
+                {ocorrencia.colaborador ? (
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#4c010c]" />
+                    <span className="font-semibold">
+                      {ocorrencia.colaborador.nome}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      ({ocorrencia.colaborador.email})
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-gray-500 italic">Não atribuído</span>
+                )}
+              </div>
+
+              {/* Auto-atribuição */}
+              <div className="mb-4">
+                <button
+                  onClick={handleAutoAssign}
+                  disabled={autoAssigning}
+                  className="w-full flex items-center justify-center gap-2 bg-[#4c010c] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#6b0115] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {autoAssigning ? "Atribuindo..." : "Auto-atribuir para mim"}
+                </button>
+              </div>
+
+              {/* Atribuir para outro usuário */}
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-600">
+                  Ou atribuir para outro colaborador:
+                </p>
+
+                <select
+                  value={selectedUserId || ""}
+                  onChange={(e) =>
+                    setSelectedUserId(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
+                  disabled={loadingUsers}
+                >
+                  <option value="">
+                    {loadingUsers
+                      ? "Carregando usuários..."
+                      : "Selecione um colaborador"}
+                  </option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.nome} ({user.email})
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={handleAssignUser}
+                  disabled={!selectedUserId || assigningUser}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {assigningUser ? "Atribuindo..." : "Atribuir Colaborador"}
+                </button>
+              </div>
+            </div>
+
             {/* Subtarefas */}
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <Layers className="w-5 h-5 text-[#4c010c]" />
-                Subtarefas ({ocorrencia.subtarefas.length})
+                Subtarefas ({ocorrencia.subtarefas?.length || 0})
               </h3>
               <div className="space-y-2">
-                {ocorrencia.subtarefas.length === 0 ? (
+                {!ocorrencia.subtarefas ||
+                ocorrencia.subtarefas.length === 0 ? (
                   <p className="text-gray-500 text-sm italic py-4 text-center bg-gray-50 rounded-lg">
                     Nenhuma subtarefa adicionada ainda
                   </p>

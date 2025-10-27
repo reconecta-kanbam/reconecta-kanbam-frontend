@@ -149,6 +149,78 @@ export const assignOcorrencia = async (
   return response.data as Ocorrencia;
 };
 
+// 🤖 Auto-atribuir ocorrência (atribuir para o usuário logado)
+export const autoAssignOcorrencia = async (id: number) => {
+  console.log(`🤖 Auto-atribuindo ocorrência ${id}`);
+
+  try {
+    // Primeiro, tentar endpoint específico de auto-atribuição sem payload
+    console.log("🔄 Tentativa 1: Endpoint auto-atribuição sem payload");
+    const response = await api.patch(ENDPOINTS.AUTO_ASSIGN_OCORRENCIA(id));
+    console.log("✅ Ocorrência auto-atribuída (sem payload):", response.data);
+    return response.data as Ocorrencia;
+  } catch (error: any) {
+    console.warn(
+      "⚠️ Endpoint sem payload falhou:",
+      error.response?.data || error.message
+    );
+
+    try {
+      // Segundo, tentar com payload { auto: true }
+      console.log(
+        "🔄 Tentativa 2: Endpoint auto-atribuição com payload auto: true"
+      );
+      const response = await api.patch(ENDPOINTS.AUTO_ASSIGN_OCORRENCIA(id), {
+        auto: true,
+      });
+      console.log(
+        "✅ Ocorrência auto-atribuída (com auto: true):",
+        response.data
+      );
+      return response.data as Ocorrencia;
+    } catch (error2: any) {
+      console.warn(
+        "⚠️ Endpoint com auto: true falhou:",
+        error2.response?.data || error2.message
+      );
+
+      // Se ambos falharem, retornar erro informativo
+      const errorMessage =
+        error2.response?.status === 404
+          ? "Endpoint de auto-atribuição não encontrado no backend"
+          : error2.response?.data?.message || error2.message;
+
+      throw new Error(`Auto-atribuição não disponível: ${errorMessage}`);
+    }
+  }
+};
+
+// 🔄 Atualizar status via Drag & Drop (MAIS DIRETO)
+export const updateStatusViaDrag = async (
+  id: number,
+  statusId: number
+): Promise<Ocorrencia> => {
+  console.log(
+    `🎯 Drag & Drop: Atualizando ocorrência ${id} para status ${statusId}`
+  );
+
+  try {
+    const response = await api.patch(ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id), {
+      statusId: statusId,
+    });
+
+    console.log("✅ Status atualizado via drag & drop:", response.data);
+    return response.data as Ocorrencia;
+  } catch (error: any) {
+    console.error("❌ Erro ao atualizar status via drag & drop:", error);
+    throw new Error(
+      `Erro ao atualizar status: ${
+        error.response?.data?.message || error.message
+      }`
+    );
+  }
+};
+
 // 🔄 Atualizar status da ocorrência
 export const updateStatusOcorrencia = async (
   id: number,
