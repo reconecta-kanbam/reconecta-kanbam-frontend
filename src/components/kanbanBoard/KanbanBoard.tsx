@@ -8,7 +8,10 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { getKanbanData } from "../../api/services/kanban";
-import { editOcorrencia, updateStatusOcorrencia } from "../../api/services/ocorrencias";
+import {
+  editOcorrencia,
+  updateStatusOcorrencia,
+} from "../../api/services/ocorrencias";
 import { Column, Card } from "../../api/types/kanban";
 import { User, GripVertical, Eye } from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
@@ -27,8 +30,11 @@ const KanbanBoard: React.FC = () => {
 
   // Função para limpar mudanças locais
   const clearLocalChanges = () => {
-    localStorage.removeItem('kanban_local_changes');
-    showNotification("🔄 Mudanças locais removidas. Recarregando...", "success");
+    localStorage.removeItem("kanban_local_changes");
+    showNotification(
+      "🔄 Mudanças locais removidas. Recarregando...",
+      "success"
+    );
     setTimeout(() => {
       loadKanban();
     }, 1000);
@@ -83,24 +89,28 @@ const KanbanBoard: React.FC = () => {
     try {
       setLoading(true);
       const data = await getKanbanData();
-      
+
       // Aplicar mudanças locais salvas (para persistir entre recarregamentos)
-      const localChanges = JSON.parse(localStorage.getItem('kanban_local_changes') || '{}');
-      
+      const localChanges = JSON.parse(
+        localStorage.getItem("kanban_local_changes") || "{}"
+      );
+
       if (Object.keys(localChanges).length > 0) {
         console.log("🔧 Aplicando mudanças locais salvas:", localChanges);
-        
-        const updatedData = data.map(column => ({
+
+        const updatedData = data.map((column) => ({
           ...column,
-          cards: column.cards.map(card => {
+          cards: column.cards.map((card) => {
             const change = localChanges[card.id];
             if (change && card.ocorrencia) {
               // Aplicar mudança de status salva localmente
               const newStatusId = change.statusId;
               const newColumnId = getColumnIdFromStatusId(newStatusId);
-              
-              console.log(`🔄 Aplicando mudança local: Card ${card.id} para status ${newStatusId}`);
-              
+
+              console.log(
+                `🔄 Aplicando mudança local: Card ${card.id} para status ${newStatusId}`
+              );
+
               return {
                 ...card,
                 ocorrencia: {
@@ -109,22 +119,22 @@ const KanbanBoard: React.FC = () => {
                     id: newStatusId,
                     chave: newColumnId,
                     nome: newColumnId,
-                    ordem: newStatusId
-                  }
-                }
+                    ordem: newStatusId,
+                  },
+                },
               };
             }
             return card;
-          })
+          }),
         }));
-        
+
         // Reorganizar cards nas colunas corretas
         const finalData = reorganizeCardsByStatus(updatedData);
         setColumns(finalData);
       } else {
         setColumns(data);
       }
-      
+
       console.log("📊 [KANBAN] Dados recarregados:", data);
     } catch (err) {
       console.error("Erro ao carregar Kanban:", err);
@@ -137,46 +147,61 @@ const KanbanBoard: React.FC = () => {
   const reorganizeCardsByStatus = (columns: Column[]): Column[] => {
     // Coletar todos os cards
     const allCards: Card[] = [];
-    columns.forEach(col => {
+    columns.forEach((col) => {
       allCards.push(...col.cards);
     });
-    
+
     // Limpar todas as colunas
-    const clearedColumns: Column[] = columns.map(col => ({ ...col, cards: [] }));
-    
+    const clearedColumns: Column[] = columns.map((col) => ({
+      ...col,
+      cards: [],
+    }));
+
     // Redistribuir cards baseado no status
-    allCards.forEach(card => {
+    allCards.forEach((card) => {
       if (card.ocorrencia?.status) {
-        const statusChave = card.ocorrencia.status.chave || getColumnIdFromStatusId(card.ocorrencia.status.id);
-        const targetColumn = clearedColumns.find(col => col.id === statusChave);
+        const statusChave =
+          card.ocorrencia.status.chave ||
+          getColumnIdFromStatusId(card.ocorrencia.status.id);
+        const targetColumn = clearedColumns.find(
+          (col) => col.id === statusChave
+        );
         if (targetColumn) {
           targetColumn.cards.push(card);
         } else {
           // Se não encontrar a coluna, colocar em "sem-status"
-          const semStatusCol = clearedColumns.find(col => col.id === 'sem-status');
+          const semStatusCol = clearedColumns.find(
+            (col) => col.id === "sem-status"
+          );
           if (semStatusCol) {
             semStatusCol.cards.push(card);
           }
         }
       }
     });
-    
+
     return clearedColumns;
   };
 
   useEffect(() => {
     loadKanban();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Função robusta para forçar atualização de status  
-  const forceUpdateStatus = async (ocorrenciaId: number, newStatusId: number, ocorrencia: any) => {
+  // Função robusta para forçar atualização de status
+  const forceUpdateStatus = async (
+    ocorrenciaId: number,
+    newStatusId: number,
+    ocorrencia: any
+  ) => {
     console.log(`🚀 Tentando FORÇAR atualização de status para ${newStatusId}`);
-    
+
     // MÉTODO 1: Endpoint específico de status com múltiplos formatos
     try {
       console.log("🔄 Método 1: Endpoint específico de status");
-      const result = await updateStatusOcorrencia(ocorrenciaId, { statusId: newStatusId });
+      const result = await updateStatusOcorrencia(ocorrenciaId, {
+        statusId: newStatusId,
+      });
       if (result && result.status?.id === newStatusId) {
         console.log("✅ Método 1 funcionou!");
         return result;
@@ -186,14 +211,14 @@ const KanbanBoard: React.FC = () => {
       console.warn("⚠️ Método 1 falhou:", error);
     }
 
-    // MÉTODO 2: Edição com statusId  
+    // MÉTODO 2: Edição com statusId
     try {
       console.log("🔄 Método 2: Edição com statusId");
       const payload = {
         titulo: ocorrencia.titulo,
         descricao: ocorrencia.descricao,
         setorId: ocorrencia.setor?.id || 1,
-        statusId: newStatusId
+        statusId: newStatusId,
       };
       const result = await editOcorrencia(ocorrenciaId, payload);
       if (result.status?.id === newStatusId) {
@@ -209,14 +234,14 @@ const KanbanBoard: React.FC = () => {
     try {
       console.log("🔄 Método 3: PUT direto no endpoint");
       const response = await fetch(`/api/ocorrencias/${ocorrenciaId}/status`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
-        body: JSON.stringify({ statusId: newStatusId })
+        body: JSON.stringify({ statusId: newStatusId }),
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.status?.id === newStatusId) {
@@ -237,24 +262,29 @@ const KanbanBoard: React.FC = () => {
         id: newStatusId,
         chave: getColumnIdFromStatusId(newStatusId),
         nome: getColumnIdFromStatusId(newStatusId),
-        ordem: newStatusId
-      }
+        ordem: newStatusId,
+      },
     };
-    
+
     // Salvar mudança no localStorage para persistir entre recarregamentos
-    const localChanges = JSON.parse(localStorage.getItem('kanban_local_changes') || '{}');
-    localChanges[ocorrenciaId] = { statusId: newStatusId, timestamp: Date.now() };
-    
+    const localChanges = JSON.parse(
+      localStorage.getItem("kanban_local_changes") || "{}"
+    );
+    localChanges[ocorrenciaId] = {
+      statusId: newStatusId,
+      timestamp: Date.now(),
+    };
+
     // Limpar mudanças antigas (mais de 24 horas)
-    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-    Object.keys(localChanges).forEach(key => {
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    Object.keys(localChanges).forEach((key) => {
       if (localChanges[key].timestamp < oneDayAgo) {
         delete localChanges[key];
       }
     });
-    
-    localStorage.setItem('kanban_local_changes', JSON.stringify(localChanges));
-    
+
+    localStorage.setItem("kanban_local_changes", JSON.stringify(localChanges));
+
     console.log("💾 Status salvo localmente para persistir recarregamentos");
     return forcedUpdate;
   };
@@ -445,15 +475,19 @@ const KanbanBoard: React.FC = () => {
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">Kanban Board</h1>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              Kanban Board
+            </h1>
             {dragging && (
               <div className="flex items-center gap-2 text-blue-600 animate-pulse">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm font-medium">Atualizando status...</span>
+                <span className="text-sm font-medium">
+                  Atualizando status...
+                </span>
               </div>
             )}
           </div>
-          
+
           {/* Botão para limpar mudanças locais */}
           <button
             onClick={clearLocalChanges}
