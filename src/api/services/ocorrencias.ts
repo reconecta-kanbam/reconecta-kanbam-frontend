@@ -102,3 +102,32 @@ export const deleteSubtarefa = async (ocorrenciaId: number, subId: number) => {
   await api.delete(ENDPOINTS.DELETE_SUBTAREFA(ocorrenciaId, subId));
   console.log("✅ Subtarefa deletada");
 };
+
+// 👤 Atribuir ocorrência a um colaborador
+export const assignOcorrencia = async (
+  id: number,
+  data: { colaboradorId: number }
+) => {
+  console.log(
+    `👤 Atribuindo ocorrência ${id} ao colaborador ${data.colaboradorId}`
+  );
+  const response = await api.patch(ENDPOINTS.ASSIGN_OCORRENCIA(id), data);
+  console.log("✅ Ocorrência atribuída:", response.data);
+  return response.data as Ocorrencia;
+};
+
+// 🔄 Atualizar status da ocorrência
+export const updateStatusOcorrencia = async (
+  id: number,
+  data: { statusId: number }
+) => {
+  console.log(
+    `🔄 Atualizando status da ocorrência ${id} para status ${data.statusId}`
+  );
+  const response = await api.patch(
+    ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id),
+    data
+  );
+  console.log("✅ Status da ocorrência atualizado:", response.data);
+  return response.data as Ocorrencia;
+};
