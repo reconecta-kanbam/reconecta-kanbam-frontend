@@ -1,17 +1,17 @@
 import axios from "axios";
 
-const api = axios.create({
-  withCredentials: false,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
 // const api = axios.create({
-//   baseURL: process.env.REACT_APP_API_URL,
 //   withCredentials: false,
-//   headers: { "Content-Type": "application/json" },
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
 // });
+
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL,
+  withCredentials: false,
+  headers: { "Content-Type": "application/json" },
+});
 
 // Interceptor para adicionar token
 api.interceptors.request.use((config) => {
