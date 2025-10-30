@@ -614,9 +614,6 @@ const KanbanBoard: React.FC = () => {
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Kanban Board
-            </h1>
             {dragging && (
               <div className="flex items-center gap-2 text-blue-600 animate-pulse">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
