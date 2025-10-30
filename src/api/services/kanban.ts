@@ -12,15 +12,15 @@ export const getKanbanData = async (filters?: {
   statusId?: number;
   gestorId?: number;
 }): Promise<Column[]> => {
-  console.log("📋 [KANBAN] Buscando ocorrências com filtros:", filters || {});
+  // console.log("📋 [KANBAN] Buscando ocorrências com filtros:", filters || {});
   const ocorrencias = await listOcorrencias(filters);
 
   if (!ocorrencias || ocorrencias.length === 0) {
-    console.log("⚠️ Nenhuma ocorrência encontrada no backend.");
+    // console.log("⚠️ Nenhuma ocorrência encontrada no backend.");
     return [];
   }
 
-  console.log(`✅ [KANBAN] ${ocorrencias.length} ocorrências carregadas.`);
+  // console.log(`✅ [KANBAN] ${ocorrencias.length} ocorrências carregadas.`);
 
   // 🔹 Agrupar por status dinamicamente
   const grouped: Record<string, Ocorrencia[]> = {};
@@ -46,6 +46,6 @@ export const getKanbanData = async (filters?: {
     ),
   }));
 
-  console.log("📊 [KANBAN] Colunas geradas:", columns);
+  // console.log("📊 [KANBAN] Colunas geradas:", columns);
   return columns;
 };

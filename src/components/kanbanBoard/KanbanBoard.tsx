@@ -610,41 +610,37 @@ const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            {dragging && (
-              <div className="flex items-center gap-2 text-blue-600 animate-pulse">
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm font-medium">
-                  Atualizando status...
-                </span>
-              </div>
-            )}
+    <div className="pgKanbanBoard">
+    
+
+        <section className="pgKanbanBoard__profile">
+      
+        </section>
+
+        {/* Lado Esquerdo - Nome e Info */}
+        <section className="pgKanbanBoard__workflowBar">
+          <div className="container">
+            {/* Nome do Projeto */}
+            <div className="pgKanbanBoard__workflowBar__left">
+                <h1 className="pgKanbanBoard__workflowBar__left__title">Nome do projeto</h1>
+                <span className="pgKanbanBoard__workflowBar__left__badge">10 cards</span>
+            </div>
+
+            {/* Filtros Avançados */}
+            <div className="pgKanbanBoard__workflowBar__right">
+              <div className="pgKanbanBoard__workflowBar__right__filters">
+                  <AdvancedFilters
+                    onFiltersChange={handleFiltersChange}
+                    showStatusFilter={false} 
+                    showCollaboratorFilter={true}
+                    showGestorFilter={true}
+                    className="shadow-lg"
+                  />
+                </div>
+            </div>
           </div>
+        </section>
 
-          {/* Botão para limpar mudanças locais */}
-          <button
-            onClick={clearLocalChanges}
-            className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
-            title="Limpar mudanças salvas localmente e recarregar do servidor"
-          >
-            🔄 Resetar
-          </button>
-        </div>
-      </div>
-
-      {/* Filtros Avançados */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <AdvancedFilters
-          onFiltersChange={handleFiltersChange}
-          showStatusFilter={false} // Não mostrar filtro de status no Kanban (já é visual)
-          showCollaboratorFilter={true}
-          showGestorFilter={true}
-          className="shadow-lg"
-        />
-      </div>
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[60vh]">
