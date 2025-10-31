@@ -1,21 +1,13 @@
-"use client";
-
+// src/components/TaskDetailDialog.tsx
 import * as Dialog from "@radix-ui/react-dialog";
-import {
-  X,
-  Plus,
-  CheckCircle2,
-  Layers,
-  Calendar,
-  User,
-  UserPlus,
-} from "lucide-react";
+import { X, Plus, CheckCircle2, Layers, Calendar, User, UserPlus, Trash2 } from "lucide-react";
 import type React from "react";
 import type { Ocorrencia } from "../../../api/types/ocorrencia";
 import { useState, useEffect } from "react";
 import { listUsers } from "../../../api/services/usuario";
+import { deleteSubtarefa } from "../../../api/services/ocorrencias";
 
-// Tipo de usuário baseado na interface de colaborador da ocorrência
+// Tipo de usuário
 interface UserType {
   id: number;
   nome: string;
@@ -33,6 +25,7 @@ interface TaskDetailDialogProps {
   ) => Promise<void>;
   onAssign?: (ocorrenciaId: number, colaboradorId: number) => Promise<void>;
   onAutoAssign?: (ocorrenciaId: number) => Promise<void>;
+  onDeleteSubtask?: () => Promise<void>;
 }
 
 const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
@@ -42,52 +35,55 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   onAddSubtask,
   onAssign,
   onAutoAssign,
+  onDeleteSubtask,
 }) => {
-  const [newSubtask, setNewSubtask] = useState({
-    titulo: "",
-    descricao: "",
-  });
+  const [newSubtask, setNewSubtask] = useState({ titulo: "", descricao: "" });
   const [users, setUsers] = useState<UserType[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [assigningUser, setAssigningUser] = useState(false);
   const [autoAssigning, setAutoAssigning] = useState(false);
+  const [deletingSubtask, setDeletingSubtask] = useState<number | null>(null);
 
-  // Carregar lista de usuários
+  // Carregar usuários ao abrir o dialog
   useEffect(() => {
     const loadUsers = async () => {
+      if (!open) return;
       setLoadingUsers(true);
       try {
         const userData = await listUsers();
         setUsers(userData);
       } catch (error) {
         console.error("Erro ao carregar usuários:", error);
+        alert("Erro ao carregar lista de colaboradores.");
       } finally {
         setLoadingUsers(false);
       }
     };
 
-    if (open) {
-      loadUsers();
-    }
+    loadUsers();
   }, [open]);
 
   const handleAddSubtask = async () => {
-    if (!onAddSubtask) return;
-    await onAddSubtask(ocorrencia.id, newSubtask);
-    setNewSubtask({ titulo: "", descricao: "" });
+    if (!onAddSubtask || !newSubtask.titulo.trim()) return;
+    try {
+      await onAddSubtask(ocorrencia.id, newSubtask);
+      setNewSubtask({ titulo: "", descricao: "" });
+    } catch (error) {
+      console.error("Erro ao adicionar subtarefa:", error);
+      alert("Erro ao adicionar subtarefa. Tente novamente.");
+    }
   };
 
-  // Funções de atribuição
   const handleAssignUser = async () => {
-    if (!selectedUserId || !onAssign) return;
-
+    if (!onAssign || !selectedUserId) return;
     setAssigningUser(true);
     try {
       await onAssign(ocorrencia.id, selectedUserId);
       setSelectedUserId(null);
     } catch (error) {
       console.error("Erro ao atribuir usuário:", error);
+      alert("Erro ao atribuir colaborador.");
     } finally {
       setAssigningUser(false);
     }
@@ -95,20 +91,53 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
   const handleAutoAssign = async () => {
     if (!onAutoAssign) return;
-
     setAutoAssigning(true);
     try {
       await onAutoAssign(ocorrencia.id);
     } catch (error) {
       console.error("Erro ao auto-atribuir:", error);
+      alert("Erro ao auto-atribuir ocorrência.");
     } finally {
       setAutoAssigning(false);
+    }
+  };
+
+  // CORREÇÃO PRINCIPAL: handleDeleteSubtask
+  const handleDeleteSubtask = async (subtarefaId: number) => {
+    const confirmDelete = window.confirm(
+      "Tem certeza que deseja deletar esta subtarefa? Esta ação não pode ser desfeita."
+    );
+    if (!confirmDelete) return;
+
+    setDeletingSubtask(subtarefaId);
+    try {
+      // Chama a função que faz DELETE na porta 3001
+      await deleteSubtarefa(ocorrencia.id, subtarefaId);
+
+      // Atualiza UI
+      if (onDeleteSubtask) {
+        await onDeleteSubtask();
+      }
+
+      console.log("Subtarefa deletada com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao deletar subtarefa:", error);
+
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro interno do servidor. Tente novamente.";
+
+      alert(`Erro ao deletar subtarefa: ${message}`);
+    } finally {
+      setDeletingSubtask(null);
     }
   };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
+
         <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />
         <Dialog.Content className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-xl p-6 overflow-y-auto z-50 rounded-l-2xl">
           {/* Header */}
@@ -121,45 +150,36 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             </Dialog.Close>
           </div>
 
-          {/* Informações principais */}
+          {/* Conteúdo */}
           <div className="space-y-6">
+            {/* Título e descrição */}
             <div className="bg-[#4c010c] p-4 rounded-xl text-white">
               <h3 className="font-bold text-lg">{ocorrencia.titulo}</h3>
               <p className="text-sm mt-1 text-white">{ocorrencia.descricao}</p>
             </div>
 
-            {/* Status, Setor, Criado em */}
+            {/* Cards de Status, Setor, Data */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
                 <div className="flex items-center gap-2 mb-1">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">
-                    Status
-                  </span>
+                  <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Status</span>
                 </div>
-                <p className="text-green-900 font-medium">
-                  {ocorrencia.status?.nome || "Não definido"}
-                </p>
+                <p className="text-green-900 font-medium">{ocorrencia.status?.nome || "Não definido"}</p>
               </div>
 
               <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
                 <div className="flex items-center gap-2 mb-1">
                   <Layers className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                    Setor
-                  </span>
+                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Setor</span>
                 </div>
-                <p className="text-purple-900 font-medium">
-                  {ocorrencia.setor?.nome || "Não definido"}
-                </p>
+                <p className="text-purple-900 font-medium">{ocorrencia.setor?.nome || "Não definido"}</p>
               </div>
 
               <div className="bg-gradient-to-br from-[#ffffa6] to-yellow-100 p-4 rounded-xl border border-yellow-300">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="w-4 h-4 text-yellow-800" />
-                  <span className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">
-                    Criado em
-                  </span>
+                  <span className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Criado em</span>
                 </div>
                 <p className="text-yellow-900 font-medium text-sm">
                   {new Date(ocorrencia.createdAt).toLocaleDateString("pt-BR")}
@@ -167,34 +187,26 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </div>
             </div>
 
-            {/* IMPLEMENTAÇÃO 4.2 e 4.3: Atribuição de Ocorrências */}
+            {/* Atribuição */}
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <User className="w-5 h-5 text-[#4c010c]" />
                 Atribuição
               </h3>
 
-              {/* Colaborador atual */}
               <div className="mb-4 p-4 bg-gray-50 rounded-xl">
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  Colaborador Atual:
-                </p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Colaborador Atual:</p>
                 {ocorrencia.colaborador ? (
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-[#4c010c]" />
-                    <span className="font-semibold">
-                      {ocorrencia.colaborador.nome}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      ({ocorrencia.colaborador.email})
-                    </span>
+                    <span className="font-semibold">{ocorrencia.colaborador.nome}</span>
+                    <span className="text-sm text-gray-500">({ocorrencia.colaborador.email})</span>
                   </div>
                 ) : (
                   <span className="text-gray-500 italic">Não atribuído</span>
                 )}
               </div>
 
-              {/* Auto-atribuição */}
               <div className="mb-4">
                 <button
                   onClick={handleAutoAssign}
@@ -206,26 +218,16 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 </button>
               </div>
 
-              {/* Atribuir para outro usuário */}
               <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-600">
-                  Ou atribuir para outro colaborador:
-                </p>
-
+                <p className="text-sm font-medium text-gray-600">Ou atribuir para outro colaborador:</p>
                 <select
                   value={selectedUserId || ""}
-                  onChange={(e) =>
-                    setSelectedUserId(
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
+                  onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
                   className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
                   disabled={loadingUsers}
                 >
                   <option value="">
-                    {loadingUsers
-                      ? "Carregando usuários..."
-                      : "Selecione um colaborador"}
+                    {loadingUsers ? "Carregando..." : "Selecione um colaborador"}
                   </option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
@@ -251,9 +253,9 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 <Layers className="w-5 h-5 text-[#4c010c]" />
                 Subtarefas ({ocorrencia.subtarefas?.length || 0})
               </h3>
+
               <div className="space-y-2">
-                {!ocorrencia.subtarefas ||
-                ocorrencia.subtarefas.length === 0 ? (
+                {!ocorrencia.subtarefas || ocorrencia.subtarefas.length === 0 ? (
                   <p className="text-gray-500 text-sm italic py-4 text-center bg-gray-50 rounded-lg">
                     Nenhuma subtarefa adicionada ainda
                   </p>
@@ -264,64 +266,55 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                       className="group bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl hover:shadow-md transition-all"
                     >
                       <summary className="p-4 cursor-pointer list-none flex justify-between items-center">
-                        <h4 className="font-semibold text-gray-800">
-                          {subtask.titulo}
-                        </h4>
-                        <div className="transform transition-transform group-open:rotate-180">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                        <h4 className="font-semibold text-gray-800 flex-1">{subtask.titulo}</h4>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteSubtask(subtask.id);
+                            }}
+                            disabled={deletingSubtask === subtask.id}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Deletar subtarefa"
                           >
-                            <path d="m6 9 6 6 6-6" />
-                          </svg>
+                            {deletingSubtask === subtask.id ? (
+                              <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 className="w-5 h-5" />
+                            )}
+                          </button>
+                          <div className="transform transition-transform group-open:rotate-180">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m6 9 6 6 6-6" />
+                            </svg>
+                          </div>
                         </div>
                       </summary>
                       <div className="p-4 pt-0 space-y-3">
                         {subtask.descricao && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500">
-                              Descrição:
-                            </p>
+                            <p className="text-sm font-medium text-gray-500">Descrição:</p>
                             <p className="text-gray-600">{subtask.descricao}</p>
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-medium text-gray-500">
-                            Status:
-                          </p>
+                          <p className="text-sm font-medium text-gray-500">Status:</p>
                           <p className="text-gray-600 capitalize">
-                            {subtask.status?.replace(/_/g, " ") ||
-                              "Não definido"}
+                            {subtask.status?.replace(/_/g, " ") || "Não definido"}
                           </p>
                         </div>
                         {subtask.responsavel && (
                           <div>
-                            <p className="text-sm font-medium text-gray-500">
-                              Responsável:
-                            </p>
-                            <p className="text-gray-600">
-                              {subtask.responsavel.nome}
-                            </p>
-                            <p className="text-gray-400 text-sm">
-                              {subtask.responsavel.email}
-                            </p>
+                            <p className="text-sm font-medium text-gray-500">Responsável:</p>
+                            <p className="text-gray-600">{subtask.responsavel.nome}</p>
+                            <p className="text-gray-400 text-sm">{subtask.responsavel.email}</p>
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-medium text-gray-500">
-                            Criado em:
-                          </p>
+                          <p className="text-sm font-medium text-gray-500">Criado em:</p>
                           <p className="text-gray-600">
-                            {new Date(subtask.createdAt).toLocaleDateString(
-                              "pt-BR"
-                            )}
+                            {new Date(subtask.createdAt).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
                       </div>
@@ -344,25 +337,19 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                     placeholder="Título da subtarefa"
                     className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
                     value={newSubtask.titulo}
-                    onChange={(e) =>
-                      setNewSubtask({ ...newSubtask, titulo: e.target.value })
-                    }
+                    onChange={(e) => setNewSubtask({ ...newSubtask, titulo: e.target.value })}
                   />
                   <textarea
                     placeholder="Descrição da subtarefa (opcional)"
                     className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all resize-none"
                     rows={3}
                     value={newSubtask.descricao}
-                    onChange={(e) =>
-                      setNewSubtask({
-                        ...newSubtask,
-                        descricao: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setNewSubtask({ ...newSubtask, descricao: e.target.value })}
                   />
                   <button
                     onClick={handleAddSubtask}
-                    className="w-full bg-[#4c010c] text-white px-4 py-3 rounded-lg hover:bg-[#3a0109] transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                    disabled={!newSubtask.titulo.trim()}
+                    className="w-full bg-[#4c010c] text-white px-4 py-3 rounded-lg hover:bg-[#3a0109] transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-5 h-5" />
                     Adicionar Subtarefa

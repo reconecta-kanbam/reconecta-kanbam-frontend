@@ -31,3 +31,16 @@ export const updateStatus = async (
   const response = await api.put(ENDPOINTS.UPDATE_STATUS(id), statusData);
   return response.data;
 };
+
+export const deleteSubtarefa = async (
+  ocorrenciaId: number,
+  subtarefaId: number
+): Promise<void> => {
+  try {
+    await api.delete(ENDPOINTS.DELETE_SUBTAREFA(ocorrenciaId, subtarefaId));
+    console.log("✅ Subtarefa deletada com sucesso no backend");
+  } catch (error: any) {
+    console.error("Erro no backend ao deletar subtarefa:", error.response?.data || error);
+    throw error; // importante: repassar o erro para o frontend
+  }
+};
