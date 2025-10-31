@@ -6,6 +6,9 @@ export interface Card {
   descricao?: string;
   colaboradorNome?: string;
   ocorrencia?: Ocorrencia;
+  createdAt: string;
+  email: string;
+  status: string;
 }
 
 export interface Column {

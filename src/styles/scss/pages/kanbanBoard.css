@@ -110,7 +110,6 @@
     padding: 0;
 }
 
-/* ====== limpar resultado ====== */
 .pgKanbanBoard__workflowBar__right__filters__advancedFilters__result {
     display: flex;
     justify-content: space-evenly;
@@ -122,4 +121,88 @@
 
 .pgKanbanBoard__workflowBar__right__filters__advancedFilters__result__button {
   width: 90%;
+}
+
+/* ====== limpar resultado ====== */
+
+.pgKanbanBoard__Workflows {
+    display: flex;
+    padding: 80px 0 50px 0;
+}
+
+.pgKanbanBoard__Workflows .container {
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.pgKanbanBoard__Workflows__column {
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  width: 20rem;
+  flex-shrink: 0;
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+
+  /* Flex column essencial */
+  display: flex;
+  flex-direction: column;
+
+  /* Altura mínima de 70vh */
+  min-height: 70vh;
+
+  /* Altura máxima = 100% do pai (ou tela) */
+  max-height: 100vh;
+  height: 100%;
+}
+
+/* Cabeçalho fixo */
+.pgKanbanBoard__Workflows__column > .flex {
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+/* Área dos cards: scroll + ocupa o resto */
+.pgKanbanBoard__Workflows__column > .space-y-3 {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-right: -0.5rem;
+  min-height: 0; /* Crucial para flex funcionar com scroll */
+
+  /* Garante que mesmo vazio, o espaço seja visível */
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* mesmo que space-y-3 */
+}
+
+/* Estiliza a barra de scroll */
+.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.pgKanbanBoard__Workflows__column--dragging-over {
+  border-color: #4c010c;         
+  background-color: #fef2f2;    
+  transform: scale(1.02);       
+}
+
+.pgKanbanBoard__Workflows__column--dragging {
+  opacity: 0.75;
 }

@@ -41,7 +41,10 @@ export const getKanbanData = async (filters?: {
         titulo: o.titulo,
         descricao: o.descricao,
         colaboradorNome: o.colaborador?.nome || "Não atribuído",
+        email: o.colaborador?.email || "",
         ocorrencia: o,
+        createdAt: o.createdAt,
+        status: o.status?.nome || "Não definido",
       })
     ),
   }));
