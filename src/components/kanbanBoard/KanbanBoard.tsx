@@ -1,593 +1,401 @@
-import { useEffect, useState } from "react"; import { DragDropContext, Droppable, Draggable, DropResult, } from "@hello-pangea/dnd";
-import { getKanbanData } from "../../api/services/kanban";
-import { editOcorrencia, updateStatusOcorrencia, updateStatusViaDrag, assignOcorrencia, autoAssignOcorrencia, } from "../../api/services/ocorrencias";
+import { useEffect, useState } from "react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { getKanbanData, KanbanFilters } from "../../api/services/kanban";
+import { updateStatusViaDrag, assignOcorrencia, autoAssignOcorrencia } from "../../api/services/ocorrencias";
+import { listStatus, createStatus, updateStatus, deleteStatus, Status } from "../../api/services/status";
+import { listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow } from "../../api/services/workflows";
 import { Column, Card } from "../../api/types/kanban";
-import { User, GripVertical, Eye, Calendar } from "lucide-react";
+import { 
+  User, GripVertical, Eye, Calendar, Settings, Plus, Edit2, Trash2, 
+  LayoutGrid, List as ListIcon, Folder, ChevronDown, Move
+} from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
 import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
 
+type ViewMode = "kanban" | "list";
+type ManagerMode = "status" | "workflow";
+
+interface Workflow {
+  id: number;
+  nome: string;
+  descricao?: string;
+}
+
 const KanbanBoard: React.FC = () => {
+  // Estados principais
   const [columns, setColumns] = useState<Column[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({});
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+
+  // Estados do gerenciador
+  const [showManager, setShowManager] = useState(false);
+  const [managerMode, setManagerMode] = useState<ManagerMode>("status");
+
+  // Estados de Status
+  const [editingStatus, setEditingStatus] = useState<Status | null>(null);
+  const [newStatusChave, setNewStatusChave] = useState("");
+  const [newStatusNome, setNewStatusNome] = useState("");
+  const [newStatusOrdem, setNewStatusOrdem] = useState<number>(1);
+
+  // Estados de Workflow
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
+  const [newWorkflowNome, setNewWorkflowNome] = useState("");
+  const [newWorkflowDesc, setNewWorkflowDesc] = useState("");
+
+  // Estados de notificação e confirmação
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
 
-  // Função para limpar mudanças locais
-  const clearLocalChanges = () => {
-    localStorage.removeItem("kanban_local_changes");
-    showNotification(
-      "🔄 Mudanças locais removidas. Recarregando...",
-      "success"
-    );
-    setTimeout(() => {
-      loadKanban();
-    }, 1000);
-  };
+  const [confirmDelete, setConfirmDelete] = useState<{
+    open: boolean;
+    id: number | null;
+    nome: string;
+    type: "status" | "workflow";
+  }>({ open: false, id: null, nome: "", type: "status" });
 
-  // Função para mostrar notificações
-  const showNotification = (
-    message: string,
-    type: "success" | "error" = "success"
-  ) => {
+  // ==================== FUNÇÕES UTILITÁRIAS ====================
+
+  const showNotification = (message: string, type: "success" | "error" = "success") => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
       setNotification({ show: false, message: "", type: "success" });
     }, 4000);
   };
 
-  // IMPLEMENTAÇÃO 4.2: Atribuir ocorrência para colaborador específico
-  const handleAssignOcorrencia = async (
-    ocorrenciaId: number,
-    colaboradorId: number
-  ) => {
-    try {
-      console.log(
-        `👤 Atribuindo ocorrência ${ocorrenciaId} para colaborador ${colaboradorId}`
-      );
-
-      const updatedOcorrencia = await assignOcorrencia(ocorrenciaId, {
-        colaboradorId,
-      });
-
-      // Atualizar o estado local
-      setColumns((prevColumns) =>
-        prevColumns.map((column) => ({
-          ...column,
-          cards: column.cards.map((card) =>
-            card.ocorrencia?.id === ocorrenciaId
-              ? { ...card, ocorrencia: updatedOcorrencia }
-              : card
-          ),
-        }))
-      );
-
-      // Atualizar o card selecionado se for o mesmo
-      if (selectedCard?.ocorrencia?.id === ocorrenciaId) {
-        setSelectedCard((prev) =>
-          prev ? { ...prev, ocorrencia: updatedOcorrencia } : null
-        );
-      }
-
-      showNotification(`✅ Ocorrência atribuída com sucesso!`, "success");
-    } catch (error: any) {
-      console.error("Erro ao atribuir ocorrência:", error);
-      const errorMessage =
-        error?.response?.data?.message || error?.message || "Erro desconhecido";
-      showNotification(
-        `❌ Erro ao atribuir ocorrência: ${errorMessage}`,
-        "error"
-      );
-    }
-  };
-
-  // IMPLEMENTAÇÃO 4.3: Auto-atribuir ocorrência para o usuário logado
-  const handleAutoAssignOcorrencia = async (ocorrenciaId: number) => {
-    try {
-      console.log(`🤖 Auto-atribuindo ocorrência ${ocorrenciaId}`);
-
-      const updatedOcorrencia = await autoAssignOcorrencia(ocorrenciaId);
-
-      // Atualizar o estado local
-      setColumns((prevColumns) =>
-        prevColumns.map((column) => ({
-          ...column,
-          cards: column.cards.map((card) =>
-            card.ocorrencia?.id === ocorrenciaId
-              ? { ...card, ocorrencia: updatedOcorrencia }
-              : card
-          ),
-        }))
-      );
-
-      // Atualizar o card selecionado se for o mesmo
-      if (selectedCard?.ocorrencia?.id === ocorrenciaId) {
-        setSelectedCard((prev) =>
-          prev ? { ...prev, ocorrencia: updatedOcorrencia } : null
-        );
-      }
-
-      showNotification(`✅ Ocorrência auto-atribuída com sucesso!`, "success");
-    } catch (error: any) {
-      console.error("Erro ao auto-atribuir ocorrência:", error);
-      const errorMessage =
-        error?.response?.data?.message || error?.message || "Erro desconhecido";
-      showNotification(
-        `❌ Erro ao auto-atribuir ocorrência: ${errorMessage}`,
-        "error"
-      );
-    }
-  };
-
-  // Função para formatar o título da coluna (status)
-  const formatColumnTitle = (titulo: string) => {
-    // Se já está formatado corretamente, retorna como está
-    if (titulo.includes(" ") && titulo[0] === titulo[0].toUpperCase()) {
-      return titulo;
-    }
-
-    // Mapeamento de casos especiais comuns
-    const specialCases: Record<string, string> = {
-      em_fila: "Em Fila",
-      em_execucao: "Em Execução",
-      em_andamento: "Em Andamento",
-      aguardando_aprovacao: "Aguardando Aprovação",
-      finalizado: "Finalizado",
-      cancelado: "Cancelado",
-      pendente: "Pendente",
-      concluido: "Concluído",
-      pausado: "Pausado",
-    };
-
-    // Verificar se existe um caso especial
-    const lowerTitle = titulo.toLowerCase();
-    if (specialCases[lowerTitle]) {
-      return specialCases[lowerTitle];
-    }
-
-    // Converter de snake_case/slug para formato legível (fallback)
-    return titulo
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  };
-
-  // 🔹 Carrega os dados de ocorrências como cards
   const loadKanban = async (currentFilters: FilterOptions = {}) => {
     try {
       setLoading(true);
-      console.log("📋 [KANBAN] Carregando com filtros:", currentFilters);
       const data = await getKanbanData(currentFilters);
-
-      // Aplicar mudanças locais salvas (para persistir entre recarregamentos)
-      const localChanges = JSON.parse(
-        localStorage.getItem("kanban_local_changes") || "{}"
-      );
-
-      if (Object.keys(localChanges).length > 0) {
-        console.log("🔧 Aplicando mudanças locais salvas:", localChanges);
-
-        const updatedData = data.map((column) => ({
-          ...column,
-          cards: column.cards.map((card) => {
-            const change = localChanges[card.id];
-            if (change && card.ocorrencia) {
-              // Aplicar mudança de status salva localmente
-              const newStatusId = change.statusId;
-              const newColumnId = getColumnIdFromStatusId(newStatusId);
-
-              console.log(
-                `🔄 Aplicando mudança local: Card ${card.id} para status ${newStatusId}`
-              );
-
-              return {
-                ...card,
-                ocorrencia: {
-                  ...card.ocorrencia,
-                  status: {
-                    id: newStatusId,
-                    chave: newColumnId,
-                    nome: newColumnId,
-                    ordem: newStatusId,
-                  },
-                },
-              };
-            }
-            return card;
-          }),
-        }));
-
-        // Reorganizar cards nas colunas corretas
-        const finalData = reorganizeCardsByStatus(updatedData);
-        setColumns(finalData);
-      } else {
-        setColumns(data);
-      }
-
-      console.log("📊 [KANBAN] Dados recarregados:", data);
+      setColumns(data);
     } catch (err) {
-      console.error("Erro ao carregar Kanban:", err);
+      showNotification("Erro ao carregar dados do Kanban", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Função para reorganizar cards baseado no status
-  const reorganizeCardsByStatus = (columns: Column[]): Column[] => {
-    // Coletar todos os cards
-    const allCards: Card[] = [];
-    columns.forEach((col) => {
-      allCards.push(...col.cards);
-    });
+  const loadWorkflows = async () => {
+    try {
+      const data = await listWorkflows();
+      setWorkflows(data);
+    } catch (error) {
+      showNotification("Erro ao carregar workflows", "error");
+    }
+  };
 
-    // Limpar todas as colunas
-    const clearedColumns: Column[] = columns.map((col) => ({
+  // ==================== HANDLERS DE OCORRÊNCIA ====================
+
+  const handleAssignOcorrencia = async (ocorrenciaId: number, colaboradorId: number) => {
+    try {
+      const updatedOcorrencia = await assignOcorrencia(ocorrenciaId, { colaboradorId });
+
+      setColumns((prevColumns) =>
+        prevColumns.map((column) => ({
+          ...column,
+          cards: column.cards.map((card) =>
+            card.ocorrencia?.id === ocorrenciaId
+              ? { ...card, ocorrencia: updatedOcorrencia }
+              : card
+          ),
+        }))
+      );
+
+      if (selectedCard?.ocorrencia?.id === ocorrenciaId) {
+        setSelectedCard((prev) =>
+          prev ? { ...prev, ocorrencia: updatedOcorrencia } : null
+        );
+      }
+
+      showNotification("Ocorrência atribuída com sucesso!", "success");
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
+  };
+
+  const handleAutoAssignOcorrencia = async (ocorrenciaId: number) => {
+    try {
+      const updatedOcorrencia = await autoAssignOcorrencia(ocorrenciaId);
+
+      setColumns((prevColumns) =>
+        prevColumns.map((column) => ({
+          ...column,
+          cards: column.cards.map((card) =>
+            card.ocorrencia?.id === ocorrenciaId
+              ? { ...card, ocorrencia: updatedOcorrencia }
+              : card
+          ),
+        }))
+      );
+
+      if (selectedCard?.ocorrencia?.id === ocorrenciaId) {
+        setSelectedCard((prev) =>
+          prev ? { ...prev, ocorrencia: updatedOcorrencia } : null
+        );
+      }
+
+      showNotification("Ocorrência auto-atribuída com sucesso!", "success");
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
+  };
+
+  // ==================== HANDLERS DE STATUS ====================
+
+  const handleCreateStatus = async () => {
+    if (!newStatusChave.trim() || !newStatusNome.trim()) {
+      showNotification("Chave e nome do status são obrigatórios", "error");
+      return;
+    }
+
+    try {
+      await createStatus({
+        chave: newStatusChave.trim(),
+        nome: newStatusNome.trim(),
+        ordem: newStatusOrdem,
+      });
+
+      showNotification(`Status "${newStatusNome}" criado com sucesso!`, "success");
+      setNewStatusChave("");
+      setNewStatusNome("");
+      setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+      loadKanban(filters);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!editingStatus) return;
+
+    if (!newStatusChave.trim() || !newStatusNome.trim()) {
+      showNotification("Chave e nome do status são obrigatórios", "error");
+      return;
+    }
+
+    try {
+      await updateStatus(editingStatus.id, {
+        chave: newStatusChave.trim(),
+        nome: newStatusNome.trim(),
+        ordem: newStatusOrdem,
+      });
+
+      showNotification("Status atualizado com sucesso!", "success");
+      setEditingStatus(null);
+      setNewStatusChave("");
+      setNewStatusNome("");
+      setNewStatusOrdem(1);
+      loadKanban(filters);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
+  };
+
+  const handleDeleteStatus = async (statusId: number, statusNome: string) => {
+    try {
+      await deleteStatus(statusId);
+      showNotification(`Status "${statusNome}" deletado com sucesso!`, "success");
+      loadKanban(filters);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
+  };
+
+  const startEditStatus = (col: Column) => {
+    setEditingStatus({
+      id: col.statusId,
+      chave: col.statusChave,
+      nome: col.titulo,
+      ordem: col.ordem,
+    });
+    setNewStatusChave(col.statusChave);
+    setNewStatusNome(col.titulo);
+    setNewStatusOrdem(col.ordem);
+    setManagerMode("status");
+    setShowManager(true);
+  };
+
+  // Reordenar colunas localmente
+  const handleReorderColumns = async (sourceIndex: number, destIndex: number) => {
+    const reorderedColumns = [...columns.filter(c => c.id !== "sem_status")];
+    const [movedColumn] = reorderedColumns.splice(sourceIndex, 1);
+    reorderedColumns.splice(destIndex, 0, movedColumn);
+
+    // Atualizar ordem localmente
+    const updatedColumns = reorderedColumns.map((col, index) => ({
       ...col,
-      cards: [],
+      ordem: index + 1,
     }));
 
-    // Redistribuir cards baseado no status
-    allCards.forEach((card) => {
-      if (card.ocorrencia?.status) {
-        const statusChave =
-          card.ocorrencia.status.chave ||
-          getColumnIdFromStatusId(card.ocorrencia.status.id);
-        const targetColumn = clearedColumns.find(
-          (col) => col.id === statusChave
-        );
-        if (targetColumn) {
-          targetColumn.cards.push(card);
-        } else {
-          // Se não encontrar a coluna, colocar em "sem-status"
-          const semStatusCol = clearedColumns.find(
-            (col) => col.id === "sem-status"
-          );
-          if (semStatusCol) {
-            semStatusCol.cards.push(card);
-          }
-        }
-      }
-    });
+    setColumns(updatedColumns);
 
-    return clearedColumns;
+    // Atualizar no backend
+    try {
+      for (const col of updatedColumns) {
+        await updateStatus(col.statusId, {
+          chave: col.statusChave,
+          nome: col.titulo,
+          ordem: col.ordem,
+        });
+      }
+      showNotification("Ordem das colunas atualizada!", "success");
+    } catch (error) {
+      showNotification("Erro ao reordenar colunas", "error");
+      loadKanban(filters); // Recarregar em caso de erro
+    }
   };
 
-  useEffect(() => {
-    loadKanban(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  // ==================== HANDLERS DE WORKFLOW ====================
 
-  // Função para atualizar filtros
-  const handleFiltersChange = (newFilters: FilterOptions) => {
-    console.log("🔄 [KANBAN] Filtros atualizados:", newFilters);
-    setFilters(newFilters);
-  }; // Função robusta para forçar atualização de status
-  const forceUpdateStatus = async (
-    ocorrenciaId: number,
-    newStatusId: number,
-    ocorrencia: any
-  ) => {
-    console.log(`🚀 Tentando FORÇAR atualização de status para ${newStatusId}`);
-
-    // MÉTODO 1: Endpoint específico de status com múltiplos formatos
-    try {
-      console.log("🔄 Método 1: Endpoint específico de status");
-      const result = await updateStatusOcorrencia(ocorrenciaId, {
-        statusId: newStatusId,
-      });
-      if (result && result.status?.id === newStatusId) {
-        console.log("✅ Método 1 funcionou!");
-        return result;
-      }
-      console.warn("⚠️ Método 1 falhou - status não atualizado");
-    } catch (error) {
-      console.warn("⚠️ Método 1 falhou:", error);
+  const handleCreateWorkflow = async () => {
+    if (!newWorkflowNome.trim()) {
+      showNotification("O nome do workflow é obrigatório", "error");
+      return;
     }
 
-    // MÉTODO 2: Edição com statusId
     try {
-      console.log("🔄 Método 2: Edição com statusId");
-      const payload = {
-        titulo: ocorrencia.titulo,
-        descricao: ocorrencia.descricao,
-        setorId: ocorrencia.setor?.id || 1,
-        statusId: newStatusId,
-      };
-      const result = await editOcorrencia(ocorrenciaId, payload);
-      if (result.status?.id === newStatusId) {
-        console.log("✅ Método 2 funcionou!");
-        return result;
-      }
-      console.warn("⚠️ Método 2 falhou - status não atualizado");
-    } catch (error) {
-      console.warn("⚠️ Método 2 falhou:", error);
-    }
-
-    // MÉTODO 3: PUT direto (tentar endpoint diferente)
-    try {
-      console.log("🔄 Método 3: PUT direto no endpoint");
-      const response = await fetch(`/api/ocorrencias/${ocorrenciaId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify({ statusId: newStatusId }),
+      await createWorkflow({
+        nome: newWorkflowNome.trim(),
+        descricao: newWorkflowDesc.trim() || undefined,
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.status?.id === newStatusId) {
-          console.log("✅ Método 3 funcionou!");
-          return result;
-        }
-      }
-      console.warn("⚠️ Método 3 falhou");
-    } catch (error) {
-      console.warn("⚠️ Método 3 falhou:", error);
+      showNotification(`Workflow "${newWorkflowNome}" criado com sucesso!`, "success");
+      setNewWorkflowNome("");
+      setNewWorkflowDesc("");
+      loadWorkflows();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
+  };
+
+  const handleUpdateWorkflow = async () => {
+    if (!editingWorkflow) return;
+
+    if (!newWorkflowNome.trim()) {
+      showNotification("O nome do workflow é obrigatório", "error");
+      return;
     }
 
-    // MÉTODO 4: Última tentativa - forçar via localStorage
-    console.log("🔧 Todos os métodos falharam - usando persistência local");
-    const forcedUpdate = {
-      ...ocorrencia,
-      status: {
-        id: newStatusId,
-        chave: getColumnIdFromStatusId(newStatusId),
-        nome: getColumnIdFromStatusId(newStatusId),
-        ordem: newStatusId,
-      },
-    };
+    try {
+      await updateWorkflow(editingWorkflow.id, {
+        nome: newWorkflowNome.trim(),
+        descricao: newWorkflowDesc.trim() || undefined,
+      });
 
-    // Salvar mudança no localStorage para persistir entre recarregamentos
-    const localChanges = JSON.parse(
-      localStorage.getItem("kanban_local_changes") || "{}"
-    );
-    localChanges[ocorrenciaId] = {
-      statusId: newStatusId,
-      timestamp: Date.now(),
-    };
-
-    // Limpar mudanças antigas (mais de 24 horas)
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    Object.keys(localChanges).forEach((key) => {
-      if (localChanges[key].timestamp < oneDayAgo) {
-        delete localChanges[key];
-      }
-    });
-
-    localStorage.setItem("kanban_local_changes", JSON.stringify(localChanges));
-
-    console.log("💾 Status salvo localmente para persistir recarregamentos");
-    return forcedUpdate;
+      showNotification("Workflow atualizado com sucesso!", "success");
+      setEditingWorkflow(null);
+      setNewWorkflowNome("");
+      setNewWorkflowDesc("");
+      loadWorkflows();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
   };
 
-  // Mapeamento de status ID baseado nas colunas disponíveis
-  const getStatusIdFromColumnId = (columnId: string): number | null => {
-    const statusMap: Record<string, number> = {
-      em_atribuicao: 1,
-      em_fila: 2,
-      desenvolvimento: 3,
-      aprovacao: 4,
-      documentacao: 5,
-      entregue: 6,
-      em_execucao: 7,
-      "sem-status": 1, // fallback para sem status
-    };
-    return statusMap[columnId] || null;
+  const handleDeleteWorkflow = async (workflowId: number, workflowNome: string) => {
+    try {
+      await deleteWorkflow(workflowId);
+      showNotification(`Workflow "${workflowNome}" deletado com sucesso!`, "success");
+      loadWorkflows();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
   };
 
-  // Mapeamento reverso: ID para chave
-  const getColumnIdFromStatusId = (statusId: number): string => {
-    const reverseMap: Record<number, string> = {
-      1: "em_atribuicao",
-      2: "em_fila",
-      3: "desenvolvimento",
-      4: "aprovacao",
-      5: "documentacao",
-      6: "entregue",
-      7: "em_execucao",
-    };
-    return reverseMap[statusId] || "sem-status";
+  const startEditWorkflow = (workflow: Workflow) => {
+    setEditingWorkflow(workflow);
+    setNewWorkflowNome(workflow.nome);
+    setNewWorkflowDesc(workflow.descricao || "");
+    setManagerMode("workflow");
+    setShowManager(true);
   };
+
+  // ==================== DRAG & DROP ====================
 
   const onDragEnd = async (result: DropResult) => {
-    const { source, destination, draggableId } = result;
+    const { source, destination, draggableId, type } = result;
 
-    // ✨ IMPLEMENTAÇÃO 4.1: DRAG & DROP REAL ✨
-    // Esta função agora utiliza o endpoint PATCH /ocorrencias/:id/status
-    // para atualizar o status das ocorrências via drag and drop
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    // Se não há destino válido, não faz nada
-    if (!destination) {
-      console.log("🚫 Drag cancelado - sem destino válido");
+    // Drag de COLUNAS
+    if (type === "COLUMN") {
+      handleReorderColumns(source.index, destination.index);
       return;
     }
 
-    // Se voltou para a mesma posição, não faz nada
-    if (
-      source.droppableId === destination.droppableId &&
-      source.index === destination.index
-    ) {
-      console.log("� Drag cancelado - mesma posição");
-      return;
-    }
-
-    console.log(
-      `🎯 Movendo card ${draggableId} de ${source.droppableId} → ${destination.droppableId}`
-    );
-
-    // Encontrar o card que está sendo movido
+    // Drag de CARDS
     const sourceColumn = columns.find((col) => col.id === source.droppableId);
-    const draggedCard = sourceColumn?.cards.find(
-      (card) => card.id === draggableId
-    );
+    const destColumn = columns.find((col) => col.id === destination.droppableId);
+    const draggedCard = sourceColumn?.cards.find((card) => card.id === draggableId);
 
-    if (!draggedCard || !draggedCard.ocorrencia) {
-      console.error("❌ Card ou ocorrência não encontrada para arrastar");
-      return;
-    }
+    if (!draggedCard || !draggedCard.ocorrencia || !destColumn) return;
 
-    // Atualização otimista da UI
+    // Optimistic update
     const newColumns = [...columns];
-    const sourceColIndex = newColumns.findIndex(
-      (col) => col.id === source.droppableId
-    );
-    const destColIndex = newColumns.findIndex(
-      (col) => col.id === destination.droppableId
-    );
+    const sourceColIndex = newColumns.findIndex((col) => col.id === source.droppableId);
+    const destColIndex = newColumns.findIndex((col) => col.id === destination.droppableId);
 
-    // Remover da coluna de origem
-    const [movedCard] = newColumns[sourceColIndex].cards.splice(
-      source.index,
-      1
-    );
-
-    // Adicionar na coluna de destino
+    const [movedCard] = newColumns[sourceColIndex].cards.splice(source.index, 1);
     newColumns[destColIndex].cards.splice(destination.index, 0, movedCard);
 
-    // Atualizar a UI imediatamente
     setColumns(newColumns);
     setDragging(true);
 
     try {
-      // Mapear a coluna de destino para um status ID
-      const newStatusId = getStatusIdFromColumnId(destination.droppableId);
+      const newStatusId = destColumn.statusId;
+      const newStatusChave = destColumn.statusChave;
 
       if (!newStatusId) {
-        throw new Error(
-          `Status ID não encontrado para coluna: ${destination.droppableId}`
-        );
+        throw new Error(`Status ID não encontrado para coluna: ${destination.droppableId}`);
       }
 
-      console.log(
-        `🔄 Atualizando status da ocorrência ${draggedCard.ocorrencia.id} para status ${newStatusId}`
-      );
-
-      // IMPLEMENTAÇÃO 4.1: Usar nova API de Drag & Drop
-      try {
-        console.log("🎯 Usando API otimizada para Drag & Drop");
-        const updatedOcorrencia = await updateStatusViaDrag(
-          draggedCard.ocorrencia.id,
-          newStatusId
-        );
-
-        console.log("✅ Status atualizado via drag & drop:", updatedOcorrencia);
-
-        // Atualizar o card na UI com os dados do backend
-        const finalColumns = [...newColumns];
-        const destColIndex = finalColumns.findIndex(
-          (col) => col.id === destination.droppableId
-        );
-        const cardIndex = finalColumns[destColIndex].cards.findIndex(
-          (card) => card.id === draggableId
-        );
-
-        if (cardIndex !== -1) {
-          finalColumns[destColIndex].cards[cardIndex] = {
-            ...finalColumns[destColIndex].cards[cardIndex],
-            ocorrencia: updatedOcorrencia,
-          };
-          setColumns(finalColumns);
-        }
-
-        showNotification(
-          `✅ Card movido para "${formatColumnTitle(
-            destination.droppableId
-          )}" com sucesso!`
-        );
-
-        setDragging(false);
-        return;
-      } catch (error) {
-        console.warn(
-          "⚠️ API direta falhou, tentando método de fallback:",
-          error
-        );
-      }
-
-      // FALLBACK: Usar função robusta que tenta todos os métodos possíveis
-      const updatedOcorrencia = await forceUpdateStatus(
+      const updatedOcorrencia = await updateStatusViaDrag(
         draggedCard.ocorrencia.id,
         newStatusId,
-        draggedCard.ocorrencia
+        newStatusChave
       );
 
-      console.log("✅ Status atualizado com sucesso:", updatedOcorrencia);
+      const finalColumns = [...newColumns];
+      const cardIndex = finalColumns[destColIndex].cards.findIndex((card) => card.id === draggableId);
 
-      // Mostrar notificação de sucesso
-      showNotification(
-        `✅ Card movido para "${formatColumnTitle(
-          destination.droppableId
-        )}" com sucesso!`
-      );
-
-      // Verificar se o status foi realmente atualizado
-      if (updatedOcorrencia.status?.id === newStatusId) {
-        console.log("🎉 Status atualizado corretamente no backend!");
-
-        // Atualizar o card na UI com os dados do backend
-        const finalColumns = [...newColumns];
-        const destColIndex = finalColumns.findIndex(
-          (col) => col.id === destination.droppableId
-        );
-        const cardIndex = finalColumns[destColIndex].cards.findIndex(
-          (card) => card.id === draggableId
-        );
-
-        if (cardIndex !== -1) {
-          finalColumns[destColIndex].cards[cardIndex] = {
-            ...finalColumns[destColIndex].cards[cardIndex],
-            ocorrencia: updatedOcorrencia,
-          };
-          setColumns(finalColumns);
-          console.log("🔄 UI atualizada com dados do backend");
-        }
-      } else {
-        console.warn(
-          "⚠️ Status não foi atualizado no backend, mantendo mudança local"
-        );
-        // A mudança já está aplicada na UI, não precisa fazer nada
+      if (cardIndex !== -1) {
+        finalColumns[destColIndex].cards[cardIndex] = {
+          ...finalColumns[destColIndex].cards[cardIndex],
+          ocorrencia: updatedOcorrencia,
+          statusId: updatedOcorrencia.status?.id || newStatusId,
+          statusNome: updatedOcorrencia.status?.nome || destColumn.titulo,
+        };
+        setColumns(finalColumns);
       }
+
+      showNotification(`Card movido para "${destColumn.titulo}" com sucesso!`);
     } catch (error) {
-      console.error("❌ Erro ao atualizar status via drag and drop:", error);
-
-      // Reverter a mudança na UI em caso de erro
-      console.log("🔄 Revertendo mudança na UI devido ao erro");
+      // Reverter mudanças
       const revertedColumns = [...columns];
-      const revertSourceIndex = revertedColumns.findIndex(
-        (col) => col.id === source.droppableId
-      );
-      const revertDestIndex = revertedColumns.findIndex(
-        (col) => col.id === destination.droppableId
-      );
-
-      // Remover da posição atual (destino)
-      const [cardToRevert] = revertedColumns[revertDestIndex].cards.splice(
-        destination.index,
-        1
-      );
-
-      // Colocar de volta na posição original
-      revertedColumns[revertSourceIndex].cards.splice(
-        source.index,
-        0,
-        cardToRevert
-      );
-
+      const revertSourceIndex = revertedColumns.findIndex((col) => col.id === source.droppableId);
+      const revertDestIndex = revertedColumns.findIndex((col) => col.id === destination.droppableId);
+      const [cardToRevert] = revertedColumns[revertDestIndex].cards.splice(destination.index, 1);
+      revertedColumns[revertSourceIndex].cards.splice(source.index, 0, cardToRevert);
       setColumns(revertedColumns);
 
-      // Mostrar notificação de erro
       showNotification(
-        `❌ Erro ao mover card: ${
-          error instanceof Error ? error.message : "Erro desconhecido"
-        }`,
+        `Erro ao mover card: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
         "error"
       );
     } finally {
@@ -595,38 +403,140 @@ const KanbanBoard: React.FC = () => {
     }
   };
 
+  // ==================== EFFECTS ====================
+
+  useEffect(() => {
+    loadKanban(filters);
+  }, [filters]);
+
+  useEffect(() => {
+    if (showManager && managerMode === "workflow") {
+      loadWorkflows();
+    }
+  }, [showManager, managerMode]);
+
+  useEffect(() => {
+    if (!showManager) {
+      setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+    }
+  }, [columns, showManager]);
+
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    setFilters(newFilters);
+  };
+
+  const totalCards = columns.reduce((sum, col) => sum + col.cards.length, 0);
+  const allCards = columns.flatMap((col) => 
+    col.cards.map(card => ({ ...card, columnTitle: col.titulo, columnId: col.id }))
+  );
+
+  // ==================== RENDER ====================
+
   return (
     <div className="pgKanbanBoard">
-    
+      {/* Barra Superior */}
+      <section className="pgKanbanBoard__workflowBar">
+        <div className="container">
+          <div className="pgKanbanBoard__workflowBar__left">
+            <h1 className="pgKanbanBoard__workflowBar__left__title">Sistema de Ocorrências</h1>
+            <span className="pgKanbanBoard__workflowBar__left__badge">{totalCards} cards</span>
+          </div>
 
-        <section className="pgKanbanBoard__profile">
-      
-        </section>
-
-        {/* Lado Esquerdo - Nome e Info */}
-        <section className="pgKanbanBoard__workflowBar">
-          <div className="container">
-            {/* Nome do Projeto */}
-            <div className="pgKanbanBoard__workflowBar__left">
-                <h1 className="pgKanbanBoard__workflowBar__left__title">Nome do projeto</h1>
-                <span className="pgKanbanBoard__workflowBar__left__badge">10 cards</span>
-            </div>
-
-            {/* Filtros Avançados */}
-            <div className="pgKanbanBoard__workflowBar__right">
-              <div className="pgKanbanBoard__workflowBar__right__filters">
-                  <AdvancedFilters
-                    onFiltersChange={handleFiltersChange}
-                    showStatusFilter={false} 
-                    showCollaboratorFilter={true}
-                    showGestorFilter={true}
-                    className="shadow-lg"
-                  />
-                </div>
+          <div className="pgKanbanBoard__workflowBar__right">
+            {/* Filtros */}
+            <div className="pgKanbanBoard__workflowBar__right__filters">
+              <AdvancedFilters
+                onFiltersChange={handleFiltersChange}
+                showStatusFilter={false}
+                showCollaboratorFilter={true}
+                showGestorFilter={true}
+                className="shadow-lg"
+              />
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
+      <section className="pgKanbanBoard__access">
+          <div className="container">
+
+              {/* Toggle de Visualização */}
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${
+                    viewMode === "kanban"
+                      ? "bg-white text-[#4c010c] shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  title="Visualização em Kanban"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="text-sm font-medium">Kanban</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${
+                    viewMode === "list"
+                      ? "bg-white text-[#4c010c] shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  title="Visualização em Lista"
+                >
+                  <ListIcon className="w-4 h-4" />
+                  <span className="text-sm font-medium">Lista</span>
+                </button>
+              </div>
+
+              {/* Dropdown de Gerenciamento */}
+              <div className="relative group">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-[#4c010c] text-white rounded-lg hover:bg-[#6a0110] transition-colors"
+                >
+                  <Settings className="w-5 h-5" />
+                  <span>Gerenciar</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  <div className="p-2">
+                    <button
+                      onClick={() => {
+                        setManagerMode("status");
+                        setShowManager(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Settings className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">Status</div>
+                        <div className="text-xs text-gray-500">Gerenciar colunas do Kanban</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setManagerMode("workflow");
+                        setShowManager(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 rounded-lg transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Folder className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">Workflows</div>
+                        <div className="text-xs text-gray-500">Agrupar ocorrências</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+          </div>
+      </section>
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -639,126 +549,702 @@ const KanbanBoard: React.FC = () => {
               ></div>
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                Carregando...
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando...</h2>
               <p className="text-gray-500">Buscando suas ocorrências</p>
             </div>
           </div>
         </div>
-      ) : columns.length > 0 ? (
-        
-        <DragDropContext onDragEnd={onDragEnd}>
+      ) : (
+        <>
+          {/* MODAL DE GERENCIAMENTO */}
+          {showManager && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      {managerMode === "status" ? "Gerenciar Status" : "Gerenciar Workflows"}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {managerMode === "status"
+                        ? "Defina as colunas do seu Kanban e reorganize-as"
+                        : "Organize ocorrências em projetos"}
+                    </p>
+                  </div>
 
-        {/* Kanban */}
+                  <div className="flex items-center gap-3">
+                    {/* Toggle entre Status e Workflow */}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setManagerMode("status")}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          managerMode === "status"
+                            ? "bg-white text-[#4c010c] shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        Status
+                      </button>
+                      <button
+                        onClick={() => setManagerMode("workflow")}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          managerMode === "workflow"
+                            ? "bg-white text-[#4c010c] shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        Workflows
+                      </button>
+                    </div>
 
-          <section className="pgKanbanBoard__Workflows">
-            <div className="container">
-              {columns.map((col) => (
-                <Droppable droppableId={col.id} key={col.id}>
-                  {(provided, snapshot) => (
-                    <div
-                        ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`
-                            pgKanbanBoard__Workflows__column
-                            ${snapshot.isDraggingOver ? 'pgKanbanBoard__Workflows__column--dragging-over' : ''}
-                            ${dragging ? 'pgKanbanBoard__Workflows__column--dragging' : ''}
-                          `.trim()}
-                        >
-                      <div className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200">
-                        <h3 className="text-xl font-bold text-gray-800">
-                          {formatColumnTitle(col.titulo)}
+                    <button
+                      onClick={() => {
+                        setShowManager(false);
+                        setEditingStatus(null);
+                        setEditingWorkflow(null);
+                        setNewStatusChave("");
+                        setNewStatusNome("");
+                        setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+                        setNewWorkflowNome("");
+                        setNewWorkflowDesc("");
+                      }}
+                      className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto flex-1">
+                  {managerMode === "status" ? (
+                    <>
+                      {/* Formulário de Status */}
+                      <div className="bg-red-50 rounded-xl p-6 mb-6 border border-blue-100">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <Plus className="w-5 h-5 text-blue-600" />
+                          {editingStatus ? "Editar Status" : "Criar Novo Status"}
                         </h3>
-                        <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
-                          {col.cards.length}
-                        </span>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Chave * <span className="text-xs text-gray-500">(ex: em_fila)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newStatusChave}
+                              onChange={(e) => setNewStatusChave(e.target.value)}
+                              placeholder="em_desenvolvimento"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Nome *
+                            </label>
+                            <input
+                              type="text"
+                              value={newStatusNome}
+                              onChange={(e) => setNewStatusNome(e.target.value)}
+                              placeholder="Em Desenvolvimento"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Ordem *
+                            </label>
+                            <input
+                              type="number"
+                              value={newStatusOrdem}
+                              onChange={(e) => setNewStatusOrdem(parseInt(e.target.value) || 1)}
+                              min="1"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          {editingStatus ? (
+                            <>
+                              <button
+                                onClick={handleUpdateStatus}
+                                className="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                              >
+                                Salvar Alterações
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingStatus(null);
+                                  setNewStatusChave("");
+                                  setNewStatusNome("");
+                                  setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+                                }}
+                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                              >
+                                Cancelar
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={handleCreateStatus}
+                              className="flex-1  text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
+                              Criar Status
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-3">
-                        {col.cards.map((card, index) => (
-                          <Draggable
-                            key={card.id}
-                            draggableId={card.id}
-                            index={index}
+                      {/* Lista de Status com Drag */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-700">
+                            Status Existentes ({columns.filter((col) => col.id !== "sem_status").length})
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Move className="w-4 h-4" />
+                            <span>Arraste para reordenar</span>
+                          </div>
+                        </div>
+
+                        {columns.filter((col) => col.id !== "sem_status").length === 0 ? (
+                          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                            <Settings className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-500">Nenhum status cadastrado</p>
+                          </div>
+                        ) : (
+                          <DragDropContext
+                            onDragEnd={(result) => {
+                              if (!result.destination) return;
+                              handleReorderColumns(result.source.index, result.destination.index);
+                            }}
                           >
+                            <Droppable droppableId="status-list" type="STATUS">
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.droppableProps}
+                                  className="space-y-3"
+                                >
+                                  {columns
+                                    .filter((col) => col.id !== "sem_status")
+                                    .sort((a, b) => a.ordem - b.ordem)
+                                    .map((col, index) => (
+                                      <Draggable key={col.id} draggableId={col.id} index={index}>
+                                        {(provided, snapshot) => (
+                                          <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            className={`bg-white border-2 rounded-xl p-4 transition-all ${
+                                              snapshot.isDragging
+                                                ? "border-blue-500 shadow-2xl rotate-1 scale-105"
+                                                : "border-gray-200 hover:border-blue-400 hover:shadow-md"
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              <div
+                                                {...provided.dragHandleProps}
+                                                className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded-lg"
+                                              >
+                                                <GripVertical className="w-5 h-5 text-gray-400" />
+                                              </div>
+
+                                              <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                  <h4 className="font-semibold text-gray-800">
+                                                    {col.titulo}
+                                                  </h4>
+                                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                                                    #{col.ordem}
+                                                  </span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mb-2">
+                                                  Chave:{" "}
+                                                  <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">
+                                                    {col.statusChave}
+                                                  </code>
+                                                </p>
+                                                <p className="text-sm text-gray-600">
+                                                  {col.cards.length} {col.cards.length === 1 ? "card" : "cards"}
+                                                </p>
+                                              </div>
+
+                                              <div className="flex gap-1">
+                                                <button
+                                                  onClick={() => startEditStatus(col)}
+                                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                  title="Editar"
+                                                >
+                                                  <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    setConfirmDelete({
+                                                      open: true,
+                                                      id: col.statusId,
+                                                      nome: col.titulo,
+                                                      type: "status",
+                                                    })
+                                                  }
+                                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                  title="Deletar"
+                                                >
+                                                  <Trash2 className="w-4 h-4" />
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                  {provided.placeholder}
+                                </div>
+                              )}
+                            </Droppable>
+                          </DragDropContext>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Formulário de Workflow */}
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 mb-6 border border-purple-100">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                          <Plus className="w-5 h-5 text-purple-600" />
+                          {editingWorkflow ? "Editar Workflow" : "Criar Novo Workflow"}
+                        </h3>
+
+                        <div className="space-y-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Nome do Workflow *
+                            </label>
+                            <input
+                              type="text"
+                              value={newWorkflowNome}
+                              onChange={(e) => setNewWorkflowNome(e.target.value)}
+                              placeholder="Ex: Projeto Alpha"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Descrição (opcional)
+                            </label>
+                            <textarea
+                              value={newWorkflowDesc}
+                              onChange={(e) => setNewWorkflowDesc(e.target.value)}
+                              placeholder="Descrição do workflow..."
+                              rows={3}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          {editingWorkflow ? (
+                            <>
+                              <button
+                                onClick={handleUpdateWorkflow}
+                                className="flex-1 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                              >
+                                Salvar Alterações
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingWorkflow(null);
+                                  setNewWorkflowNome("");
+                                  setNewWorkflowDesc("");
+                                }}
+                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                              >
+                                Cancelar
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={handleCreateWorkflow}
+                              className="flex-1 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                            >
+                              Criar Workflow
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Lista de Workflows */}
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                          Workflows Existentes ({workflows.length})
+                        </h3>
+
+                        {workflows.length === 0 ? (
+                          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                            <Folder className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-500">Nenhum workflow cadastrado</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {workflows.map((workflow) => (
+                              <div
+                                key={workflow.id}
+                                className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:shadow-md transition-all"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-800 mb-1">
+                                      {workflow.nome}
+                                    </h4>
+                                    {workflow.descricao && (
+                                      <p className="text-sm text-gray-600 mb-2">
+                                        {workflow.descricao}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => startEditWorkflow(workflow)}
+                                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                      title="Editar"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        setConfirmDelete({
+                                          open: true,
+                                          id: workflow.id,
+                                          nome: workflow.nome,
+                                          type: "workflow",
+                                        })
+                                      }
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Deletar"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL DE CONFIRMAÇÃO */}
+          {confirmDelete.open && (
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Confirmar Exclusão</h3>
+                <p className="text-gray-600 mb-6">
+                  Tem certeza que deseja deletar {confirmDelete.type === "status" ? "o status" : "o workflow"}{" "}
+                  <strong>"{confirmDelete.nome}"</strong>?
+                  <br />
+                  <br />
+                  <span className="text-red-600 font-medium">Esta ação não pode ser desfeita.</span>
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setConfirmDelete({ open: false, id: null, nome: "", type: "status" })}
+                    className="px-5 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (confirmDelete.id !== null) {
+                        if (confirmDelete.type === "status") {
+                          await handleDeleteStatus(confirmDelete.id, confirmDelete.nome);
+                        } else {
+                          await handleDeleteWorkflow(confirmDelete.id, confirmDelete.nome);
+                        }
+                      }
+                      setConfirmDelete({ open: false, id: null, nome: "", type: "status" });
+                    }}
+                    className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Deletar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VISUALIZAÇÃO KANBAN */}
+          {viewMode === "kanban" && columns.length > 0 && (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="all-columns" direction="horizontal" type="COLUMN">
+                {(provided) => (
+                  <section 
+                    className="pgKanbanBoard__Workflows"
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                  >
+                    <div className="container">
+                      {columns
+                        .filter((col) => col.id !== "sem_status")
+                        .sort((a, b) => a.ordem - b.ordem)
+                        .map((col, colIndex) => (
+                          <Draggable key={col.id} draggableId={col.id} index={colIndex} isDragDisabled={false}>
                             {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                onClick={() => {
-                                  setSelectedCard(card);
-                                  setDetailOpen(true);
-                                }}
-                                className={`bg-gradient-to-br from-gray-50 to-slate-50 hover:from-red-50 hover:to-rose-50 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all border-2 ${
-                                  snapshot.isDragging
-                                    ? "border-[#4c010c] shadow-2xl rotate-2 scale-105"
-                                    : "border-gray-200 hover:border-[#4c010c] hover:shadow-lg"
+                                className={`pgKanbanBoard__Workflows__column ${
+                                  snapshot.isDragging ? "opacity-50" : ""
                                 }`}
                               >
-                                <div className="flex items-start gap-2 mb-3">
-                                  <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                                  <h4 className="font-semibold text-gray-800 flex-1 leading-snug">
-                                    {card.titulo} - {card.status || "Não definido"}
-                                  </h4>
-                            
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedCard(card);
-                                      setDetailOpen(true);
-                                    }}
-                                    aria-label="Ver detalhes"
-                                    className="p-1 rounded hover:bg-gray-100 ml-2"
-                                  >
-                                    <Eye className="w-5 h-5 text-gray-500" />
-                                  </button>
+                                <div 
+                                  {...provided.dragHandleProps}
+                                  className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200 cursor-grab active:cursor-grabbing hover:bg-gray-50 -mx-4 px-4 py-2 rounded-t-lg"
+                                  title="Arraste para reordenar coluna"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <GripVertical className="w-5 h-5 text-gray-400" />
+                                    <h3 className="text-xl font-bold text-gray-800">{col.titulo}</h3>
+                                  </div>
+                                  <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
+                                    {col.cards.length}
+                                  </span>
                                 </div>
-                                  {/* BLOCO 1: Colaborador */}
-                                  {card.colaboradorNome && (
-                                 <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 whitespace-nowrap overflow-hidden">
-                                      <User className="w-4 h-4 text-[#4c010c] flex-shrink-0" />
-                                      <span className="font-medium truncate">
-                                        {card.colaboradorNome} - {card.email}
-                                      </span>
-                                    </div>
-                                  )}
 
-                                  {/* BLOCO 2: Data (AGORA ALINHADA) */}
-                                  {card.createdAt && (
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
-                                      <Calendar className="w-4 h-4 text-[#4c010c]" />
-                                      <span className="font-medium">
-                                        {new Date(card.createdAt).toLocaleDateString("pt-BR")}
-                                      </span>
+                                <Droppable droppableId={col.id} type="CARD">
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                      className={`space-y-3 min-h-[200px] ${
+                                    snapshot.isDraggingOver ? "bg-red-50 rounded-lg p-2" : ""
+                                  }`}
+                                    >
+                                      {col.cards.map((card, index) => (
+                                        <Draggable key={card.id} draggableId={card.id} index={index}>
+                                          {(provided, snapshot) => (
+                                            <div
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              {...provided.dragHandleProps}
+                                              onClick={() => {
+                                                setSelectedCard(card);
+                                                setDetailOpen(true);
+                                              }}
+                                              className={`bg-gradient-to-br from-gray-50 to-slate-50 hover:from-red-50 hover:to-rose-50 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all border-2 ${
+                                                snapshot.isDragging
+                                                  ? "border-[#4c010c] shadow-2xl rotate-2 scale-105"
+                                                  : "border-gray-200 hover:border-[#4c010c] hover:shadow-lg"
+                                              }`}
+                                            >
+                                              <div className="flex items-start gap-2 mb-3">
+                                                <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                <h4 className="font-semibold text-gray-800 flex-1 leading-snug">
+                                                  {card.titulo}
+                                                </h4>
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedCard(card);
+                                                    setDetailOpen(true);
+                                                  }}
+                                                  aria-label="Ver detalhes"
+                                                  className="p-1 rounded hover:bg-gray-100 ml-2"
+                                                >
+                                                  <Eye className="w-5 h-5 text-gray-500" />
+                                                </button>
+                                              </div>
+
+                                              {card.colaboradorNome && (
+                                                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
+                                                  <User className="w-4 h-4 text-[#4c010c] flex-shrink-0" />
+                                                  <span className="font-medium truncate">
+                                                    {card.colaboradorNome}
+                                                  </span>
+                                                </div>
+                                              )}
+
+                                              {card.createdAt && (
+                                                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
+                                                  <Calendar className="w-4 h-4 text-[#4c010c]" />
+                                                  <span className="font-medium">
+                                                    {new Date(card.createdAt).toLocaleDateString("pt-BR")}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+
+                                      {col.cards.length === 0 && (
+                                        <p className="text-gray-400 text-sm italic text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                                          Arraste cards para cá
+                                        </p>
+                                      )}
                                     </div>
                                   )}
+                                </Droppable>
                               </div>
                             )}
                           </Draggable>
                         ))}
-                      </div>
-
                       {provided.placeholder}
-
-                      {col.cards.length === 0 && (
-                        <p className="text-gray-400 text-sm italic text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                          Arraste cards para cá
-                        </p>
-                      )}
                     </div>
-                  )}
-                </Droppable>
-              ))}
-             </div>
-          </section>
-        </DragDropContext>
-      ) : (
-        <p className="text-gray-500 text-center mt-10">
-          Nenhuma ocorrência disponível.
-        </p>
+                  </section>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
+
+          {/* VISUALIZAÇÃO LISTA MELHORADA */}
+          {viewMode === "list" && (
+            <section className="px-8 py-6 bg-gray-50 min-h-screen">
+              <div className="max-w-7xl mx-auto">
+                {allCards.length === 0 ? (
+                  <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-300 shadow-sm">
+                    <ListIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg font-medium">Nenhuma ocorrência encontrada</p>
+                    <p className="text-gray-400 text-sm mt-2">Crie uma nova ocorrência para começar</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Header da Lista */}
+                    <div className="bg-white rounded-t-2xl border-b-2 border-gray-200 px-6 py-4 mb-2 shadow-sm">
+                      <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                        <div className="col-span-4">Título</div>
+                        <div className="col-span-2">Status</div>
+                        <div className="col-span-3">Responsável</div>
+                        <div className="col-span-2">Data de Criação</div>
+                        <div className="col-span-1 text-right">Ações</div>
+                      </div>
+                    </div>
+
+                    {/* Lista de Cards */}
+                    <div className="bg-white rounded-b-2xl shadow-sm divide-y divide-gray-100">
+                      {allCards.map((card) => (
+                        <div
+                          key={card.id}
+                          onClick={() => {
+                            setSelectedCard(card);
+                            setDetailOpen(true);
+                          }}
+                          className="px-6 py-4 hover:bg-blue-50 transition-all cursor-pointer group"
+                        >
+                          <div className="grid grid-cols-12 gap-4 items-center">
+                            {/* Título */}
+                            <div className="col-span-4">
+                              <h3 className="font-semibold text-gray-900 group-hover:text-[#4c010c] transition-colors">
+                                {card.titulo}
+                              </h3>
+                            </div>
+
+                            {/* Status */}
+                            <div className="col-span-2">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                {card.columnTitle}
+                              </span>
+                            </div>
+
+                            {/* Responsável */}
+                            <div className="col-span-3">
+                              {card.colaboradorNome ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-details rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                    {card.colaboradorNome.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="text-sm text-gray-700 font-medium truncate">
+                                    {card.colaboradorNome}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400 italic">Não atribuído</span>
+                              )}
+                            </div>
+
+                            {/* Data */}
+                            <div className="col-span-2">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <span>
+                                  {new Date(card.createdAt).toLocaleDateString("pt-BR", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Ações */}
+                            <div className="col-span-1 flex justify-end">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCard(card);
+                                  setDetailOpen(true);
+                                }}
+                                className="p-2 hover:bg-white rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                title="Ver detalhes"
+                              >
+                                <Eye className="w-5 h-5 text-gray-500 hover:text-[#4c010c]" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Footer com Total */}
+                    <div className="mt-4 bg-white rounded-xl px-6 py-3 shadow-sm">
+                      <p className="text-sm text-gray-600">
+                        Total: <span className="font-semibold text-gray-900">{allCards.length}</span>{" "}
+                        {allCards.length === 1 ? "ocorrência" : "ocorrências"}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* EMPTY STATE */}
+          {columns.length === 0 && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+              <div className="text-center max-w-md">
+                <div className="text-6xl mb-4">📋</div>
+                <h2 className="text-2xl font-bold text-gray-700 mb-2">Nenhum Status Cadastrado</h2>
+                <p className="text-gray-500 mb-6">
+                  Crie seu primeiro status para começar a organizar suas ocorrências
+                </p>
+                <button
+                  onClick={() => {
+                    setManagerMode("status");
+                    setShowManager(true);
+                  }}
+                  className="inline-flex items-center gap-2 bg-[#4c010c] text-white px-6 py-3 rounded-lg hover:bg-[#6a0110] transition-colors font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  Criar Primeiro Status
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
+
+      {/* DIALOG DE DETALHES */}
       {selectedCard?.ocorrencia && (
         <TaskDetailDialog
           open={detailOpen}
@@ -769,13 +1255,11 @@ const KanbanBoard: React.FC = () => {
         />
       )}
 
-      {/* Notificação Toast */}
+      {/* NOTIFICAÇÃO TOAST */}
       {notification.show && (
         <div
           className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 ${
-            notification.type === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
+            notification.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"
           }`}
         >
           <div className="flex items-center gap-2">

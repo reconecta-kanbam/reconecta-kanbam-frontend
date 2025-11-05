@@ -405,7 +405,7 @@
   color: var(--gray-300);
 }
 
-/* Responsive */
+/* Responsive 
 @media (max-width: 1024px) {
   .auth-left {
     padding: 3rem;
@@ -451,4 +451,4 @@
     bottom: auto;
     margin-top: 2rem;
   }
-}
+}*/

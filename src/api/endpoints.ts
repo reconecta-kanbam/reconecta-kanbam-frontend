@@ -20,12 +20,13 @@ const ENDPOINTS = {
   CREATE_USER: "/users",
   UPDATE_USER_WEIGHT: (userId: number) => `/users/${userId}/peso`,
 
-  // STATUS
+  // STATUS (Colunas do Kanban)
   LIST_STATUS: "/status",
   CREATE_STATUS: "/status",
   UPDATE_STATUS: (id: number) => `/status/${id}`,
+  DELETE_STATUS: (id: number) => `/status/${id}`,
 
-  // Subtarefas
+  // SUBTAREFAS
   CREATE_SUBTAREFA: (ocorrenciaId: number) =>
     `/ocorrencias/${ocorrenciaId}/subtarefas`,
   EDIT_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
@@ -33,8 +34,14 @@ const ENDPOINTS = {
   DELETE_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
     `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
 
-  // KANBAN (mock por enquanto, depois backend vai gerar via estados)
-  LIST_KANBAN: "/kanban",
+  // WORKFLOWS (Agrupamento opcional de ocorrências)
+  LIST_WORKFLOWS: "/workflows",
+  CREATE_WORKFLOW: "/workflows",
+  UPDATE_WORKFLOW: (id: number) => `/workflows/${id}`,
+  DELETE_WORKFLOW: (id: number) => `/workflows/${id}`,
+
+  // KANBAN
+  GET_KANBAN_DATA: "/kanban",
 } as const;
 
 export default ENDPOINTS;

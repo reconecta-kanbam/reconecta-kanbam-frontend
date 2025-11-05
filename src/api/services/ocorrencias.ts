@@ -37,7 +37,6 @@ export const listOcorrencias = async (filters?: {
 }) => {
   console.log("📥 Buscando ocorrências com filtros:", filters || {});
 
-  // Filtrar parâmetros vazios
   const cleanFilters = filters
     ? Object.fromEntries(
         Object.entries(filters).filter(
@@ -78,14 +77,13 @@ export const editOcorrencia = async (
     titulo: string;
     descricao: string;
     setorId: number;
-    statusId?: number; // Adicionar statusId como opcional
+    statusId?: number;
   }
 ) => {
   console.log(`✏️ Editando ocorrência ID ${id}`, data);
   const response = await api.patch(ENDPOINTS.EDIT_OCORRENCIA(id), data);
   console.log("✅ Ocorrência atualizada:", response.data);
 
-  // Debug: verificar se o status foi atualizado
   if (data.statusId) {
     const statusAntes = data.statusId;
     const statusDepois = response.data.status?.id;
@@ -149,12 +147,11 @@ export const assignOcorrencia = async (
   return response.data as Ocorrencia;
 };
 
-// 🤖 Auto-atribuir ocorrência (atribuir para o usuário logado)
+// 🤖 Auto-atribuir ocorrência
 export const autoAssignOcorrencia = async (id: number) => {
   console.log(`🤖 Auto-atribuindo ocorrência ${id}`);
 
   try {
-    // Primeiro, tentar endpoint específico de auto-atribuição sem payload
     console.log("🔄 Tentativa 1: Endpoint auto-atribuição sem payload");
     const response = await api.patch(ENDPOINTS.AUTO_ASSIGN_OCORRENCIA(id));
     console.log("✅ Ocorrência auto-atribuída (sem payload):", response.data);
@@ -166,7 +163,6 @@ export const autoAssignOcorrencia = async (id: number) => {
     );
 
     try {
-      // Segundo, tentar com payload { auto: true }
       console.log(
         "🔄 Tentativa 2: Endpoint auto-atribuição com payload auto: true"
       );
@@ -184,7 +180,6 @@ export const autoAssignOcorrencia = async (id: number) => {
         error2.response?.data || error2.message
       );
 
-      // Se ambos falharem, retornar erro informativo
       const errorMessage =
         error2.response?.status === 404
           ? "Endpoint de auto-atribuição não encontrado no backend"
@@ -195,33 +190,96 @@ export const autoAssignOcorrencia = async (id: number) => {
   }
 };
 
-// 🔄 Atualizar status via Drag & Drop (MAIS DIRETO)
+// 🔄 Atualizar status via Drag & Drop (VERSÃO CORRIGIDA COM MÚLTIPLAS TENTATIVAS)
 export const updateStatusViaDrag = async (
-  id: number,
-  statusId: number
+  ocorrenciaId: number,
+  statusId: number,
+  statusChave?: string
 ): Promise<Ocorrencia> => {
-  console.log(
-    `🎯 Drag & Drop: Atualizando ocorrência ${id} para status ${statusId}`
-  );
+  const endpoint = ENDPOINTS.UPDATE_STATUS_OCORRENCIA(ocorrenciaId);
+  
+  console.log("═══════════════════════════════════════════════════");
+  console.log(`🎯 DRAG & DROP: Atualizando Ocorrência #${ocorrenciaId}`);
+  console.log(`📍 Endpoint: ${endpoint}`);
+  console.log(`🏷️  Status ID: ${statusId}`);
+  console.log(`🔑 Status Chave: ${statusChave || "não fornecida"}`);
+  console.log("═══════════════════════════════════════════════════");
 
-  try {
-    const response = await api.patch(ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id), {
-      statusId: statusId,
-    });
+  // PRIORIDADE: Enviar a CHAVE do status (baseado no Postman)
+  const payloads = [
+    // Formato 1: status como chave string (O QUE FUNCIONA NO POSTMAN)
+    ...(statusChave ? [{ status: statusChave }] : []),
+    
+    // Formato 2: statusId numérico
+    { statusId: statusId },
+    
+    // Formato 3: statusChave como campo
+    ...(statusChave ? [{ statusChave: statusChave }] : []),
+    
+    // Formato 4: objeto status com id
+    { status: { id: statusId } },
+    
+    // Formato 5: snake_case
+    { status_id: statusId },
+  ];
 
-    console.log("✅ Status atualizado via drag & drop:", response.data);
-    return response.data as Ocorrencia;
-  } catch (error: any) {
-    console.error("❌ Erro ao atualizar status via drag & drop:", error);
-    throw new Error(
-      `Erro ao atualizar status: ${
-        error.response?.data?.message || error.message
-      }`
-    );
+  let lastError: any = null;
+
+  // Tentar cada formato de payload
+  for (let i = 0; i < payloads.length; i++) {
+    const payload = payloads[i];
+    
+    console.log(`\n🔄 Tentativa ${i + 1}/${payloads.length}`);
+    console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
+
+    try {
+      const response = await api.patch(endpoint, payload);
+      
+      console.log("\n✅ SUCESSO! Status atualizado");
+      console.log("📥 Resposta do backend:", response.data);
+      
+      // Validar se o status foi realmente atualizado
+      if (response.data.status?.id === statusId) {
+        console.log("✅ Status confirmado no retorno!");
+      } else {
+        console.warn("⚠️ Status retornado diferente do esperado");
+        console.warn(`   Esperado: ${statusId}, Recebido: ${response.data.status?.id}`);
+      }
+      
+      console.log("═══════════════════════════════════════════════════\n");
+      return response.data as Ocorrencia;
+      
+    } catch (error: any) {
+      lastError = error;
+      
+      console.error(`❌ Tentativa ${i + 1} falhou`);
+      console.error(`   Status HTTP: ${error.response?.status}`);
+      console.error(`   Mensagem: ${error.response?.data?.message || error.message}`);
+      console.error(`   Dados completos:`, error.response?.data);
+      
+      // Se não é a última tentativa, continua
+      if (i < payloads.length - 1) {
+        console.log("   → Tentando próximo formato...");
+        continue;
+      }
+    }
   }
-};
 
-// 🔄 Atualizar status da ocorrência
+  // Se chegou aqui, todas as tentativas falharam
+  console.error("\n❌ TODAS AS TENTATIVAS FALHARAM");
+  console.error("═══════════════════════════════════════════════════");
+  console.error("📍 Endpoint testado:", endpoint);
+  console.error("📦 Payloads testados:", JSON.stringify(payloads, null, 2));
+  console.error("❌ Último erro:", lastError?.response?.data || lastError?.message);
+  console.error("═══════════════════════════════════════════════════\n");
+
+  throw new Error(
+    `Erro ao atualizar status: ${
+      lastError?.response?.data?.message || lastError?.message || "Erro desconhecido"
+    }`
+  );
+};
+// 🔄 Atualizar status da ocorrência (mantido para compatibilidade)
 export const updateStatusOcorrencia = async (
   id: number,
   data: { statusId: number }
@@ -232,15 +290,13 @@ export const updateStatusOcorrencia = async (
   );
   console.log(`📍 Endpoint: ${endpoint}`);
 
-  // Tentar diferentes formatos de payload
   const basePayloads = [
-    { statusId: data.statusId }, // formato camelCase
-    { status_id: data.statusId }, // formato snake_case
-    { status: { id: data.statusId } }, // formato objeto aninhado
-    { statusChave: data.statusId }, // formato com chave numérica
+    { statusId: data.statusId },
+    { status_id: data.statusId },
+    { status: { id: data.statusId } },
+    { statusChave: data.statusId },
   ];
 
-  // Tentar formatos com chave string baseados nos status disponíveis
   const statusChaveMap: Record<number, string> = {
     1: "em_atribuicao",
     2: "em_fila",
@@ -254,11 +310,11 @@ export const updateStatusOcorrencia = async (
   const statusChave = statusChaveMap[data.statusId];
   const chavePayloads = statusChave
     ? [
-        { statusChave: statusChave }, // formato com chave string
-        { status_chave: statusChave }, // formato snake_case chave
-        { chave: statusChave }, // formato direto chave
-        { status: statusChave }, // formato status como string
-        { status: { id: data.statusId, chave: statusChave } }, // formato completo
+        { statusChave: statusChave },
+        { status_chave: statusChave },
+        { chave: statusChave },
+        { status: statusChave },
+        { status: { id: data.statusId, chave: statusChave } },
       ]
     : [];
 
@@ -278,13 +334,11 @@ export const updateStatusOcorrencia = async (
         error.response?.data || error.message
       );
 
-      // Se não é a última tentativa, continua
       if (i < payloads.length - 1) {
         console.log(`🔄 Tentando próximo formato...`);
         continue;
       }
 
-      // Se chegou aqui, todas as tentativas falharam
       console.error("❌ Todas as tentativas falharam");
       console.error("📍 Endpoint usado:", endpoint);
       console.error("📦 Payloads testados:", payloads);

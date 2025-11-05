@@ -5,26 +5,30 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   logout: () => void;
-  updateAuth: () => void; // Adicionado para atualizar manualmente
+  updateAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [auth, setAuth] = useState<boolean>(isAuthenticated());
-  const [loading, setLoading] = useState(true);
+  const [auth, setAuth] = useState<boolean>(false); // ← Começa false
+  const [loading, setLoading] = useState(true); // ← Começa true
 
   const updateAuth = () => {
-    setAuth(isAuthenticated());
+    const authenticated = isAuthenticated();
+    console.log("🔐 AuthContext: isAuthenticated =", authenticated);
+    setAuth(authenticated);
   };
 
   useEffect(() => {
+    console.log("🔄 AuthContext: Inicializando...");
     updateAuth();
-    setLoading(false);
+    setLoading(false); // ← Para de carregar após verificar
 
-    // Escuta mudanças no storage (para multi-tab)
+    // Escuta mudanças no storage (multi-tab)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'access_token') {
+        console.log("🔄 AuthContext: Token mudou em outra aba");
         updateAuth();
       }
     };
@@ -37,8 +41,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const logout = () => {
+    console.log("🚪 AuthContext: Fazendo logout...");
     logoutUser();
-    updateAuth(); // Atualiza imediatamente após logout
+    setAuth(false); // ← Atualiza imediatamente
   };
 
   return (

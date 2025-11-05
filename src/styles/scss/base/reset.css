@@ -89,6 +89,10 @@ body {
     color: var(--text-color);
 }
 
+.bg-details {
+  background-color: var(--details-color);
+}
+
 h1,
 h2,
 h3 {

@@ -1,3 +1,4 @@
+// src/api/types/kanban.ts
 import { Ocorrencia } from "./ocorrencia";
 
 export interface Card {
@@ -5,14 +6,25 @@ export interface Card {
   titulo: string;
   descricao?: string;
   colaboradorNome?: string;
+  email?: string;
   ocorrencia?: Ocorrencia;
   createdAt: string;
-  email: string;
-  status: string;
+  statusId: number;
+  statusNome: string;
 }
 
 export interface Column {
   id: string;
   titulo: string;
+  statusId: number;
+  statusChave: string;
+  ordem: number;
   cards: Card[];
+}
+
+export interface Status {
+  id: number;
+  chave: string;
+  nome: string;
+  ordem: number;
 }

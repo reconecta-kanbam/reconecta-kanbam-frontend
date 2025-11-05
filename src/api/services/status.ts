@@ -1,46 +1,49 @@
+// src/api/services/status.ts
 import api from "../api";
 import ENDPOINTS from "../endpoints";
 
-// Lista todos os status
-export const listStatus = async () => {
-  const response = await api.get(ENDPOINTS.LIST_STATUS);
-  return response.data;
-};
-
-// Cria um novo status
-export const createStatus = async (statusData: {
+export interface Status {
+  id: number;
+  chave: string;
   nome: string;
-  descricao?: string;
-  cor?: string;
-  ativo?: boolean;
-}) => {
-  const response = await api.post(ENDPOINTS.CREATE_STATUS, statusData);
+  ordem: number;
+}
+
+export interface CreateStatusRequest {
+  chave: string;
+  nome: string;
+  ordem: number;
+}
+
+export interface UpdateStatusRequest {
+  chave?: string;
+  nome?: string;
+  ordem?: number;
+}
+
+// Lista todos os status ordenados
+export const listStatus = async (): Promise<Status[]> => {
+  const response = await api.get<Status[]>(ENDPOINTS.LIST_STATUS);
+  // Garantir ordenação por ordem
+  return response.data.sort((a, b) => a.ordem - b.ordem);
+};
+
+// Cria novo status
+export const createStatus = async (data: CreateStatusRequest): Promise<Status> => {
+  const response = await api.post<Status>(ENDPOINTS.CREATE_STATUS, data);
   return response.data;
 };
 
-// Atualiza um status
+// Atualiza status
 export const updateStatus = async (
   id: number,
-  statusData: {
-    nome?: string;
-    descricao?: string;
-    cor?: string;
-    ativo?: boolean;
-  }
-) => {
-  const response = await api.put(ENDPOINTS.UPDATE_STATUS(id), statusData);
+  data: UpdateStatusRequest
+): Promise<Status> => {
+  const response = await api.patch<Status>(ENDPOINTS.UPDATE_STATUS(id), data);
   return response.data;
 };
 
-export const deleteSubtarefa = async (
-  ocorrenciaId: number,
-  subtarefaId: number
-): Promise<void> => {
-  try {
-    await api.delete(ENDPOINTS.DELETE_SUBTAREFA(ocorrenciaId, subtarefaId));
-    console.log("✅ Subtarefa deletada com sucesso no backend");
-  } catch (error: any) {
-    console.error("Erro no backend ao deletar subtarefa:", error.response?.data || error);
-    throw error; // importante: repassar o erro para o frontend
-  }
+// Deleta status
+export const deleteStatus = async (id: number): Promise<void> => {
+  await api.delete(ENDPOINTS.DELETE_STATUS(id));
 };
