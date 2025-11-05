@@ -50,7 +50,7 @@ const Header: React.FC<HeaderProps> = () => {
               <li className="nav__menu__list__item">
                 <Link
                   className="nav__menu__list__item__link"
-                  to="/KanbanBoard"
+                  to="/kanban-board"
                   onClick={closeMenu}
                 >
                   Kanban

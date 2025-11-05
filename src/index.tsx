@@ -21,7 +21,7 @@ const router = createBrowserRouter([
         element: <AuthPg />,
       },
       {
-        path: "kanbanBoard",
+        path: "kanban-board",
         element: (
           <PrivateRoute>
             <KanbanBoard />
