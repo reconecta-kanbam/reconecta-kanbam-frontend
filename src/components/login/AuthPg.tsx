@@ -126,7 +126,7 @@ const AuthPg: React.FC = () => {
       showSuccess(SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS);
       
       setTimeout(() => {
-        navigate('/kanbanBoard');
+        navigate('/kanban-board');
       }, 1000);
     } catch (err: any) {
       const message = err.response?.data?.message || ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS;
