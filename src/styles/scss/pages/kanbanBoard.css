@@ -37,10 +37,15 @@
 }
 
 .pgKanbanBoard__workflowBar__right {
-    box-shadow: 0 0 60px #00000026;
+    display: flex;
     position: absolute;
     right: 10px;
     top: 0;
+    z-index: 10;
+}
+
+.pgKanbanBoard__workflowBar__right__filters {
+  box-shadow: 0 0 60px #00000026;
 }
 
 .pgKanbanBoard__workflowBar__right__filters__advancedFilters {

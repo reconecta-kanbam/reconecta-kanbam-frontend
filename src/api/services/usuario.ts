@@ -2,6 +2,15 @@ import api from "../api";
 import ENDPOINTS from "../endpoints";
 import { LoginRequest, RegisterRequest, AuthResponse } from "../types/usuario";
 
+export interface Colaborador {
+  id: number;
+  nome: string;
+  email: string;
+  perfil: string;
+  setorId: number;
+  peso: number;
+}
+
 export const loginUser = async (
   data: LoginRequest,
   rememberMe: boolean = true
@@ -13,7 +22,6 @@ export const loginUser = async (
 
   const response = await api.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN, payload);
 
-  // Tenta extrair o token de diferentes possíveis estruturas
   const token =
     response.data.token ||
     response.data.access_token ||
@@ -24,8 +32,6 @@ export const loginUser = async (
     console.error("Token não encontrado na resposta:", response.data);
     throw new Error("Token não retornado pela API");
   }
-
-  console.log("Token extraído:", token);
 
   const storage = rememberMe ? localStorage : sessionStorage;
   storage.setItem("access_token", token);
@@ -49,10 +55,6 @@ export const registerUser = async (
     payload
   );
 
-  // Debug: veja o que a API está retornando
-  console.log("Resposta completa do registro:", response.data);
-
-  // Tenta extrair o token de diferentes possíveis estruturas
   const token =
     response.data.token ||
     response.data.access_token ||
@@ -71,13 +73,16 @@ export const recoverPassword = async (email: string): Promise<void> => {
   return response.data;
 };
 
-// Lista todos os usuários
-export const listUsers = async () => {
+export const listUsers = async (): Promise<Colaborador[]> => {
   const response = await api.get(ENDPOINTS.LIST_USERS);
   return response.data;
 };
 
-// Lista todos os status
+export const listColaboradores = async (): Promise<Colaborador[]> => {
+  const response = await api.get(ENDPOINTS.LIST_USERS);
+  return response.data;
+};
+
 export const listStatus = async () => {
   const response = await api.get(ENDPOINTS.LIST_STATUS);
   return response.data;

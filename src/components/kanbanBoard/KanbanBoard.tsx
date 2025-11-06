@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
 import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
+import { listColaboradores, Colaborador } from "../../api/services/usuario";
 
 type ViewMode = "kanban" | "list";
 type ManagerMode = "status" | "workflow";
@@ -19,6 +20,14 @@ interface Workflow {
   id: number;
   nome: string;
   descricao?: string;
+}
+
+interface OnlineUser {
+  id: number;
+  nome: string;
+  email: string;
+  iniciais: string;
+  cor: string;
 }
 
 const KanbanBoard: React.FC = () => {
@@ -46,6 +55,9 @@ const KanbanBoard: React.FC = () => {
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [newWorkflowNome, setNewWorkflowNome] = useState("");
   const [newWorkflowDesc, setNewWorkflowDesc] = useState("");
+
+  // Estados de Usuários Online
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
   // Estados de notificação e confirmação
   const [notification, setNotification] = useState<{
@@ -403,10 +415,42 @@ const KanbanBoard: React.FC = () => {
     }
   };
 
+   // ==================== Lista de usuários  ====================
+
+    const getInitials = (nome: string): string => {
+    const words = nome.trim().split(" ");
+      if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    };
+
+    const getRandomColor = (): string => {
+      const colors = [
+        "#4c010c", "#6a0110", "#8b0000", "#a52a2a", "#c41e3a",
+        "#dc143c", "#ff6347", "#ff4500", "#ff8c00", "#ffa500"
+      ];
+      return colors[Math.floor(Math.random() * colors.length)];
+    };
+
+    const loadOnlineUsers = async () => {
+      try {
+        const colaboradores = await listColaboradores();
+        const users = colaboradores.slice(0, 10).map((colab) => ({
+          id: colab.id,
+          nome: colab.nome,
+          email: colab.email,
+          iniciais: getInitials(colab.nome),
+          cor: getRandomColor(),
+        }));
+        setOnlineUsers(users);
+      } catch (error) {
+        console.error("Erro ao carregar usuários online:", error);
+      }
+    };
   // ==================== EFFECTS ====================
 
   useEffect(() => {
     loadKanban(filters);
+    loadOnlineUsers();
   }, [filters]);
 
   useEffect(() => {
@@ -443,6 +487,54 @@ const KanbanBoard: React.FC = () => {
           </div>
 
           <div className="pgKanbanBoard__workflowBar__right">
+            {/* Usuários Online - Dados do Backend */}
+            <div className="pgKanbanBoard__workflowBar__right__UsuáriosOn">
+              {onlineUsers.length > 0 && (
+                <div className="flex items-center gap-2 mr-4">
+                  {/* Primeiros 5 usuários */}
+                  {onlineUsers.slice(0, 5).map((user) => (
+                    <div key={user.id} className="relative group">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer transition-transform hover:scale-110 shadow-md border-2 border-white"
+                        style={{ backgroundColor: user.cor }}
+                      >
+                        {user.iniciais}
+                      </div>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                        <div className="font-semibold">{user.nome}</div>
+                        <div className="text-gray-300 text-[10px] mt-0.5">{user.email}</div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                      {/* Indicador Online */}
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    </div>
+                  ))}
+
+                  {/* Botão +N (se houver mais de 5 usuários) */}
+                  {onlineUsers.length > 5 && (
+                    <div className="relative group">
+                      <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer transition-transform hover:scale-110 shadow-md border-2 border-white">
+                        +{onlineUsers.length - 5}
+                      </div>
+                      {/* Tooltip com lista de usuários adicionais */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                        <div className="font-semibold mb-1">
+                          Mais {onlineUsers.length - 5} {onlineUsers.length - 5 === 1 ? "usuário" : "usuários"}
+                        </div>
+                        {onlineUsers.slice(5, 10).map((user) => (
+                          <div key={user.id} className="text-gray-300 text-[10px]">
+                            • {user.nome}
+                          </div>
+                        ))}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Filtros */}
             <div className="pgKanbanBoard__workflowBar__right__filters">
               <AdvancedFilters
