@@ -123,8 +123,7 @@
   width: 90%;
 }
 
-/* ====== limpar resultado ====== */
-
+/* ====== Workflows Container ====== */
 .pgKanbanBoard__Workflows {
     display: flex;
     padding: 24px 0 0 60px;
@@ -138,67 +137,76 @@
     gap: 8px;
 }
 
+/* ====== Coluna do Kanban com Scroll Interno ====== */
 .pgKanbanBoard__Workflows__column {
   border-radius: 1rem;
   padding: 1.25rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  width: 20rem;
+  width: 274px;
   flex-shrink: 0;
   border: 2px solid #e5e7eb;
   transition: all 0.3s ease;
-
-  /* Flex column essencial */
   display: flex;
   flex-direction: column;
-
-  /* Altura mínima de 70vh */
-  min-height: 70vh;
-
-  /* Altura máxima = 100% do pai (ou tela) */
-  max-height: 100vh;
-  height: 100%;
+  /* Altura máxima da coluna */
+  max-height: 85vh;
 }
 
-/* Cabeçalho fixo */
-.pgKanbanBoard__Workflows__column > .flex {
+/* Cabeçalho fixo da coluna */
+.pgKanbanBoard__Workflows__column > div:first-child {
   flex-shrink: 0;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #e5e7eb;
 }
 
-/* Área dos cards: scroll + ocupa o resto */
-.pgKanbanBoard__Workflows__column > .space-y-3 {
+/* ====== Área de Cards com Scroll ====== */
+.pgKanbanBoard__Workflows__column__content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 0.5rem;
   margin-right: -0.5rem;
-  min-height: 0; /* Crucial para flex funcionar com scroll */
-
-  /* Garante que mesmo vazio, o espaço seja visível */
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem; /* mesmo que space-y-3 */
+  /* Altura mínima */
+  min-height: 172px;
 }
 
-/* Estiliza a barra de scroll */
-.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar {
+/* Coluna Vazia - Tamanho Fixo 274x172px */
+.pgKanbanBoard__Workflows__column__content--empty {
+  width: 100%;
+  min-height: 172px;
+  max-height: 172px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding-right: 0;
+  margin-right: 0;
+}
+
+/* ====== Scrollbar Customizada ====== */
+.pgKanbanBoard__Workflows__column__content::-webkit-scrollbar {
   width: 8px;
 }
 
-.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+.pgKanbanBoard__Workflows__column__content::-webkit-scrollbar-track {
+  background: var(--gray-100);
   border-radius: 4px;
 }
 
-.pgKanbanBoard__Workflows__column > .space-y-3::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.pgKanbanBoard__Workflows__column__content::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 4px;
 }
 
+.pgKanbanBoard__Workflows__column__content::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
+
+/* Firefox */
+.pgKanbanBoard__Workflows__column__content {
+  scrollbar-width: thin;
+  /* scrollbar-color: var(--gray-300) var(--gray-100); */
+}
+
+/* ====== Estados de Drag ====== */
 .pgKanbanBoard__Workflows__column--dragging-over {
   border-color: #4c010c;         
   background-color: #fef2f2;    
@@ -210,7 +218,6 @@
 }
 
 /* ====== Fácil acessos ====== */
-
 .pgKanbanBoard__access {
     display: flex;
     align-items: center;

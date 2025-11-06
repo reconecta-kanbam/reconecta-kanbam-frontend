@@ -984,129 +984,144 @@ const KanbanBoard: React.FC = () => {
           )}
 
           {/* VISUALIZAÇÃO KANBAN */}
-          {viewMode === "kanban" && columns.length > 0 && (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="all-columns" direction="horizontal" type="COLUMN">
-                {(provided) => (
-                  <section 
-                    className="pgKanbanBoard__Workflows"
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                  >
-                    <div className="container">
-                      {columns
-                        .filter((col) => col.id !== "sem_status")
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((col, colIndex) => (
-                          <Draggable key={col.id} draggableId={col.id} index={colIndex} isDragDisabled={false}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={`pgKanbanBoard__Workflows__column ${
-                                  snapshot.isDragging ? "opacity-50" : ""
-                                }`}
-                              >
-                                <div 
-                                  {...provided.dragHandleProps}
-                                  className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200 cursor-grab active:cursor-grabbing hover:bg-gray-50 -mx-4 px-4 py-2 rounded-t-lg"
-                                  title="Arraste para reordenar coluna"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <GripVertical className="w-5 h-5 text-gray-400" />
-                                    <h3 className="text-xl font-bold text-gray-800">{col.titulo}</h3>
-                                  </div>
-                                  <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
-                                    {col.cards.length}
-                                  </span>
-                                </div>
+         {/* VISUALIZAÇÃO KANBAN */}
+{viewMode === "kanban" && columns.length > 0 && (
+  <DragDropContext onDragEnd={onDragEnd}>
+    <Droppable droppableId="all-columns" direction="horizontal" type="COLUMN">
+      {(provided) => (
+        <section 
+          className="pgKanbanBoard__Workflows"
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+        >
+          <div className="container">
+            {columns
+              .filter((col) => col.id !== "sem_status")
+              .sort((a, b) => a.ordem - b.ordem)
+              .map((col, colIndex) => (
+                <Draggable key={col.id} draggableId={col.id} index={colIndex} isDragDisabled={false}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={`pgKanbanBoard__Workflows__column ${
+                        snapshot.isDragging ? "opacity-50" : ""
+                      }`}
+                    >
+                      {/* Header da Coluna */}
+                      <div 
+                        {...provided.dragHandleProps}
+                        className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200 cursor-grab active:cursor-grabbing hover:bg-gray-50 -mx-4 px-4 py-2 rounded-t-lg"
+                        title="Arraste para reordenar coluna"
+                      >
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="w-5 h-5 text-gray-400" />
+                          <h3 className="text-xl font-bold text-gray-800">{col.titulo}</h3>
+                        </div>
+                        <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
+                          {col.cards.length}
+                        </span>
+                      </div>
 
-                                <Droppable droppableId={col.id} type="CARD">
-                                  {(provided, snapshot) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.droppableProps}
-                                      className={`space-y-3 min-h-[200px] ${
-                                    snapshot.isDraggingOver ? "bg-red-50 rounded-lg p-2" : ""
-                                  }`}
-                                    >
-                                      {col.cards.map((card, index) => (
-                                        <Draggable key={card.id} draggableId={card.id} index={index}>
-                                          {(provided, snapshot) => (
-                                            <div
-                                              ref={provided.innerRef}
-                                              {...provided.draggableProps}
-                                              {...provided.dragHandleProps}
-                                              onClick={() => {
-                                                setSelectedCard(card);
-                                                setDetailOpen(true);
-                                              }}
-                                              className={`bg-gradient-to-br from-gray-50 to-slate-50 hover:from-red-50 hover:to-rose-50 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all border-2 ${
-                                                snapshot.isDragging
-                                                  ? "border-[#4c010c] shadow-2xl rotate-2 scale-105"
-                                                  : "border-gray-200 hover:border-[#4c010c] hover:shadow-lg"
-                                              }`}
-                                            >
-                                              <div className="flex items-start gap-2 mb-3">
-                                                <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                                                <h4 className="font-semibold text-gray-800 flex-1 leading-snug">
-                                                  {card.titulo}
-                                                </h4>
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedCard(card);
-                                                    setDetailOpen(true);
-                                                  }}
-                                                  aria-label="Ver detalhes"
-                                                  className="p-1 rounded hover:bg-gray-100 ml-2"
-                                                >
-                                                  <Eye className="w-5 h-5 text-gray-500" />
-                                                </button>
-                                              </div>
+                      {/* Droppable Area com Altura Dinâmica */}
+                      <Droppable droppableId={col.id} type="CARD">
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={`pgKanbanBoard__Workflows__column__content ${
+                              col.cards.length === 0 ? "pgKanbanBoard__Workflows__column__content--empty" : ""
+                            }`}
+                            style={{
+                              backgroundColor: snapshot.isDraggingOver ? "#fef2f2" : "transparent",
+                              borderRadius: snapshot.isDraggingOver ? "0.5rem" : "0",
+                              padding: snapshot.isDraggingOver ? "0.5rem" : "0",
+                              transition: "background-color 0.2s ease",
+                            }}
+                          >
+                            {col.cards.length > 0 ? (
+                              <div className="space-y-3  mr-3">
+                                {col.cards.map((card, index) => (
+                                  <Draggable key={card.id} draggableId={card.id} index={index}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        onClick={() => {
+                                          setSelectedCard(card);
+                                          setDetailOpen(true);
+                                        }}
+                                        className={`bg-gradient-to-br from-gray-50 to-slate-50 hover:from-red-50 hover:to-rose-50 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all border-2 ${
+                                          snapshot.isDragging
+                                            ? "border-[#4c010c] shadow-2xl rotate-2 scale-105"
+                                            : "border-gray-200 hover:border-[#4c010c] hover:shadow-lg"
+                                        }`}
+                                      >
+                                        <div className="flex items-start gap-2 mb-3">
+                                          <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                                          <h4 className="font-semibold text-gray-800 flex-1 leading-snug">
+                                            {card.titulo}
+                                          </h4>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedCard(card);
+                                              setDetailOpen(true);
+                                            }}
+                                            aria-label="Ver detalhes"
+                                            className="p-1 rounded hover:bg-gray-100 ml-2"
+                                          >
+                                            <Eye className="w-5 h-5 text-gray-500" />
+                                          </button>
+                                        </div>
 
-                                              {card.colaboradorNome && (
-                                                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
-                                                  <User className="w-4 h-4 text-[#4c010c] flex-shrink-0" />
-                                                  <span className="font-medium truncate">
-                                                    {card.colaboradorNome}
-                                                  </span>
-                                                </div>
-                                              )}
+                                        {card.colaboradorNome && (
+                                          <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
+                                            <User className="w-4 h-4 text-[#4c010c] flex-shrink-0" />
+                                            <span className="font-medium truncate">
+                                              {card.colaboradorNome}
+                                            </span>
+                                          </div>
+                                        )}
 
-                                              {card.createdAt && (
-                                                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
-                                                  <Calendar className="w-4 h-4 text-[#4c010c]" />
-                                                  <span className="font-medium">
-                                                    {new Date(card.createdAt).toLocaleDateString("pt-BR")}
-                                                  </span>
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </Draggable>
-                                      ))}
-                                      {provided.placeholder}
-
-                                      {col.cards.length === 0 && (
-                                        <p className="text-gray-400 text-sm italic text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                                          Arraste cards para cá
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                </Droppable>
+                                        {card.createdAt && (
+                                          <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
+                                            <Calendar className="w-4 h-4 text-[#4c010c]" />
+                                            <span className="font-medium">
+                                              {new Date(card.createdAt).toLocaleDateString("pt-BR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                              </div>
+                            ) : (
+                              /* Estado Vazio */
+                              <div className="flex items-center justify-center h-full w-full">
+                                <p className="text-gray-400 text-sm italic text-center py-6 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                                  Arraste cards para cá
+                                </p>
                               </div>
                             )}
-                          </Draggable>
-                        ))}
-                      {provided.placeholder}
+
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
                     </div>
-                  </section>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
+                  )}
+                </Draggable>
+              ))}
+            {provided.placeholder}
+          </div>
+        </section>
+      )}
+    </Droppable>
+  </DragDropContext>
+)}
 
           {/* VISUALIZAÇÃO LISTA MELHORADA */}
           {viewMode === "list" && (

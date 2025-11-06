@@ -42,7 +42,7 @@ const AuthPg: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/kanbanBoard', { replace: true });
+      navigate('/kanban-board', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
