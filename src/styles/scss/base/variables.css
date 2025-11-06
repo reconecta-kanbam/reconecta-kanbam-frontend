@@ -20,6 +20,10 @@
 --gray-900: rgba(55, 59, 66, 1);
 --green-950: rgba(0, 73, 85, 1);
 --text-color: #555;
+--cancel-color: rgba(220, 38, 38, 1);        
+--cancel-bg: rgba(220, 38, 38, 1);
+--cancel-hover: rgba(254, 242, 242, 1);
+--cancel-active: rgba(220, 38, 38, 1);
 
 --shadow: rgba(10, 22, 50, 0.24);
 

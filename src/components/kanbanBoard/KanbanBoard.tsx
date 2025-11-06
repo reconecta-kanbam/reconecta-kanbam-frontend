@@ -163,55 +163,74 @@ const KanbanBoard: React.FC = () => {
 
   // ==================== HANDLERS DE STATUS ====================
 
+  // ==================== FUNÇÕES DE AUTOMAÇÃO ====================
+
+  const generateChaveFromNome = (nome: string): string => {
+    return nome
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .replace(/[^a-z0-9\s]/g, "") // Remove caracteres especiais
+      .replace(/\s+/g, "_") // Substitui espaços por underscores
+      .replace(/_+/g, "_") // Remove underscores duplicados
+      .replace(/^_|_$/g, ""); // Remove underscores do início/fim
+  };
+
   const handleCreateStatus = async () => {
-    if (!newStatusChave.trim() || !newStatusNome.trim()) {
-      showNotification("Chave e nome do status são obrigatórios", "error");
+    if (!newStatusNome.trim()) {
+      showNotification("Nome do status é obrigatório", "error");
       return;
     }
 
     try {
+      // Gerar chave automaticamente a partir do nome
+      const chaveGerada = generateChaveFromNome(newStatusNome);
+      
+      // Calcular ordem automaticamente (próximo número disponível)
+      const proximaOrdem = columns.filter(c => c.id !== "sem_status").length + 1;
+
       await createStatus({
-        chave: newStatusChave.trim(),
+        chave: chaveGerada,
         nome: newStatusNome.trim(),
-        ordem: newStatusOrdem,
+        ordem: proximaOrdem,
       });
 
       showNotification(`Status "${newStatusNome}" criado com sucesso!`, "success");
       setNewStatusChave("");
       setNewStatusNome("");
-      setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+      setNewStatusOrdem(proximaOrdem + 1);
       loadKanban(filters);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
       showNotification(`Erro: ${errorMessage}`, "error");
     }
   };
-
+  
   const handleUpdateStatus = async () => {
-    if (!editingStatus) return;
+  if (!editingStatus) return;
 
-    if (!newStatusChave.trim() || !newStatusNome.trim()) {
-      showNotification("Chave e nome do status são obrigatórios", "error");
-      return;
-    }
+  if (!newStatusChave.trim() || !newStatusNome.trim()) {
+    showNotification("Chave e nome do status são obrigatórios", "error");
+    return;
+  }
 
-    try {
-      await updateStatus(editingStatus.id, {
-        chave: newStatusChave.trim(),
-        nome: newStatusNome.trim(),
-        ordem: newStatusOrdem,
-      });
+  try {
+    await updateStatus(editingStatus.id, {
+      chave: newStatusChave.trim(),
+      nome: newStatusNome.trim(),
+      ordem: editingStatus.ordem, // Mantém a ordem atual
+    });
 
-      showNotification("Status atualizado com sucesso!", "success");
-      setEditingStatus(null);
-      setNewStatusChave("");
-      setNewStatusNome("");
-      setNewStatusOrdem(1);
-      loadKanban(filters);
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
-      showNotification(`Erro: ${errorMessage}`, "error");
-    }
+    showNotification("Status atualizado com sucesso!", "success");
+    setEditingStatus(null);
+    setNewStatusChave("");
+    setNewStatusNome("");
+    loadKanban(filters);
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+    showNotification(`Erro: ${errorMessage}`, "error");
+  }
   };
 
   const handleDeleteStatus = async (statusId: number, statusNome: string) => {
@@ -719,44 +738,50 @@ const KanbanBoard: React.FC = () => {
                           {editingStatus ? "Editar Status" : "Criar Novo Status"}
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Nome *</label>
+                            <input
+                              type="text"
+                              value={newStatusNome}
+                              onChange={(e) => {
+                                const nome = e.target.value;
+                                setNewStatusNome(nome);
+                                
+                                // Auto-preencher chave enquanto digita (tanto ao criar quanto ao editar)
+                                const chaveGerada = generateChaveFromNome(nome);
+                                setNewStatusChave(chaveGerada);
+                              }}
+                              placeholder="Ex: Em Desenvolvimento"
+                            />
+                          </div>
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Chave * <span className="text-xs text-gray-500">(ex: em_fila)</span>
+                              Chave * {!editingStatus && <span className="text-xs text-gray-500">(gerada automaticamente)</span>}
                             </label>
                             <input
                               type="text"
                               value={newStatusChave}
                               onChange={(e) => setNewStatusChave(e.target.value)}
-                              placeholder="em_desenvolvimento"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="desenvolvimento_teste"
+                              disabled={!editingStatus && !newStatusChave}
+                              className={`${
+                                editingStatus || newStatusChave
+                                  ? "focus:ring-2 " 
+                                  : "bg-gray-50 text-gray-500 cursor-not-allowed"
+                              }`}
                             />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Nome *
-                            </label>
-                            <input
-                              type="text"
-                              value={newStatusNome}
-                              onChange={(e) => setNewStatusNome(e.target.value)}
-                              placeholder="Em Desenvolvimento"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Ordem *
-                            </label>
-                            <input
-                              type="number"
-                              value={newStatusOrdem}
-                              onChange={(e) => setNewStatusOrdem(parseInt(e.target.value) || 1)}
-                              min="1"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
+                            {!editingStatus && newStatusChave && (
+                              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                ✓ Chave gerada: <code className="bg-green-50 px-1 rounded">{newStatusChave}</code>
+                              </p>
+                            )}
+                            {editingStatus && (
+                              <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                ℹ️ Você pode editar a chave manualmente
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -764,8 +789,8 @@ const KanbanBoard: React.FC = () => {
                           {editingStatus ? (
                             <>
                               <button
-                                onClick={handleUpdateStatus}
-                                className="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                              className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg  transition-colors font-medium"
+                              style={{ backgroundColor: 'var(--details-color)' }}
                               >
                                 Salvar Alterações
                               </button>
@@ -776,7 +801,8 @@ const KanbanBoard: React.FC = () => {
                                   setNewStatusNome("");
                                   setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
                                 }}
-                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                                className="px-6 py-2 border border-gray-300 text-white rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                                style={{ backgroundColor: 'var(--cancel-bg)' }}
                               >
                                 Cancelar
                               </button>
@@ -784,7 +810,8 @@ const KanbanBoard: React.FC = () => {
                           ) : (
                             <button
                               onClick={handleCreateStatus}
-                              className="flex-1  text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                              className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg  transition-colors font-medium"
+                              style={{ backgroundColor: 'var(--details-color)' }}
                             >
                               Criar Status
                             </button>
@@ -798,10 +825,10 @@ const KanbanBoard: React.FC = () => {
                           <h3 className="text-lg font-semibold text-gray-700">
                             Status Existentes ({columns.filter((col) => col.id !== "sem_status").length})
                           </h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                          {/* <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Move className="w-4 h-4" />
                             <span>Arraste para reordenar</span>
-                          </div>
+                          </div> */}
                         </div>
 
                         {columns.filter((col) => col.id !== "sem_status").length === 0 ? (
@@ -834,8 +861,8 @@ const KanbanBoard: React.FC = () => {
                                             {...provided.draggableProps}
                                             className={`bg-white border-2 rounded-xl p-4 transition-all ${
                                               snapshot.isDragging
-                                                ? "border-blue-500 shadow-2xl rotate-1 scale-105"
-                                                : "border-gray-200 hover:border-blue-400 hover:shadow-md"
+                                                ? "border-red-50 shadow-2xl rotate-1 scale-105"
+                                                : "border-gray-200 hover:border-red-100 hover:shadow-md"
                                             }`}
                                           >
                                             <div className="flex items-center gap-3">
@@ -954,7 +981,7 @@ const KanbanBoard: React.FC = () => {
                                   setNewWorkflowNome("");
                                   setNewWorkflowDesc("");
                                 }}
-                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                                className="px-6 py-2 border bg-red-50r-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                               >
                                 Cancelar
                               </button>
