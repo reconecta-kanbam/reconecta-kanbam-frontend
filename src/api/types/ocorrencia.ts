@@ -27,6 +27,7 @@ export interface Ocorrencia {
   documentacaoUrl: string | null;
   descricaoExecucao: string | null;
   createdAt: string;
+  workflowId?: number;
   updatedAt: string;
   subtarefas: {
     id: number;
@@ -66,6 +67,9 @@ export interface CreateOcorrenciaRequest {
   colaboradorId?: number;
   colaboradorNome?: string;
   statusId?: number; // Adicionado para permitir escolha do status na criação
+  workflowId?: number;
+  documentacaoUrl?: string; // NOVO
+  descricaoExecucao?: string; // NOVO
 }
 
 export interface Setor {

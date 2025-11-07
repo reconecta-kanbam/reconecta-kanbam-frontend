@@ -59,21 +59,11 @@ const Header: React.FC<HeaderProps> = () => {
 
               <li className="nav__menu__list__item">
                 <Link
-                  to="/criar-ocorrencia"
+                  to="/occurrence"
                   className="nav__menu__list__item__link"
                   onClick={closeMenu}
                 >
-                  Criar Ocorrência
-                </Link>
-              </li>
-
-              <li className="nav__menu__list__item">
-                <Link
-                  to="/listar-ocorrencias"
-                  className="nav__menu__list__item__link"
-                  onClick={closeMenu}
-                >
-                  Todas as ocorrências
+                  Ocorrências
                 </Link>
               </li>
 
