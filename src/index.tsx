@@ -9,6 +9,8 @@ import KanbanBoard from "./components/kanbanBoard/KanbanBoard";
 import AuthPg from "./components/login/AuthPg";
 import PrivateRoute from "./components/PrivateRoute/PrivateRoute";
 import Occurrences from "./components/occurrences/Occurrences";
+import Users from "./components/users/Users";
+import Settings from "./components/settings/Settings";
 
 const router = createBrowserRouter([
   {
@@ -35,9 +37,25 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+      {
+        path: "users",
+        element: (
+          <PrivateRoute>
+            <Users />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "settings",
+        element: (
+          <PrivateRoute>
+            <Settings />
+          </PrivateRoute>
+        ),
+      },
       // Redireciona raiz para kanbanBoard
       {
-        index: true, // ← MUDANÇA: Usar index ao invés de path "/"
+        index: true,
         element: (
           <PrivateRoute>
             <KanbanBoard />

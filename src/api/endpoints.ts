@@ -26,11 +26,11 @@ const ENDPOINTS = {
   UPDATE_STATUS: (id: number) => `/status/${id}`,
   DELETE_STATUS: (id: number) => `/status/${id}`,
 
-  // SUBTAREFAS
+  // SUBTAREFAS - 🔥 CORRIGIDO: Removido /users/ do path de edição
   CREATE_SUBTAREFA: (ocorrenciaId: number) =>
     `/ocorrencias/${ocorrenciaId}/subtarefas`,
   EDIT_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
-    `/users/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
+    `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`, // ✅ Path correto
   DELETE_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
     `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
 

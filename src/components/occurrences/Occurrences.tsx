@@ -1,28 +1,25 @@
 import { useEffect, useState } from "react";
-import { listOcorrencias, deleteOcorrencia, } from "../../api/services/ocorrencias";
+import { listOcorrencias, deleteOcorrencia } from "../../api/services/ocorrencias";
 import type { Ocorrencia } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
-import { Plus, Search, Eye, Calendar, Trash2, Edit2, Link, FileCheck, } from "lucide-react";
+import { Plus, Search, Eye, Calendar, Trash2, Edit2, Link, FileCheck } from "lucide-react";
 import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
 import TaskDetailDialog from "../kanbanBoard/dialogs/TaskDetailDialog";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import EditOccurrence from "./EditOccurrence";
 
 const Occurrences: React.FC = () => {
-  // Estados principais
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<FilterOptions>({});
   const [loading, setLoading] = useState(true);
 
-  // Estados de UI
   const [selectedOcorrencia, setSelectedOcorrencia] = useState<Ocorrencia | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [ocorrenciaToEdit, setOcorrenciaToEdit] = useState<Ocorrencia | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: number | null; }>({ open: false, id: null });
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
   
-  // Carregar dados iniciais
   useEffect(() => {
     loadOcorrencias();
   }, [filters]);
@@ -40,28 +37,37 @@ const Occurrences: React.FC = () => {
     }
   };
 
-  // Abrir modal de criação
+  const updateOcorrenciaInState = (updatedOcorrencia: Ocorrencia) => {
+    setOcorrencias(prev =>
+      prev.map(occ => occ.id === updatedOcorrencia.id ? updatedOcorrencia : occ)
+    );
+    if (selectedOcorrencia?.id === updatedOcorrencia.id) {
+      setSelectedOcorrencia(updatedOcorrencia);
+    }
+  };
+
+  const removeOcorrenciaFromState = (ocorrenciaId: number) => {
+    setOcorrencias(prev => prev.filter(occ => occ.id !== ocorrenciaId));
+  };
+
   const handleOpenCreateModal = () => {
     setOcorrenciaToEdit(null);
     setIsEditModalOpen(true);
   };
 
-  // Abrir modal de edição
   const handleOpenEditModal = (ocorrencia: Ocorrencia) => {
     setOcorrenciaToEdit(ocorrencia);
     setIsEditModalOpen(true);
   };
 
-  // Callback após sucesso na criação/edição
   const handleSuccess = () => {
     loadOcorrencias();
   };
 
-  // Deletar ocorrência
   const handleDelete = async (id: number) => {
     try {
       await deleteOcorrencia(id);
-      setOcorrencias((prev) => prev.filter((occ) => occ.id !== id));
+      removeOcorrenciaFromState(id);
       toast.success("Ocorrência deletada com sucesso!");
       setConfirmDelete({ open: false, id: null });
     } catch (error) {
@@ -70,14 +76,12 @@ const Occurrences: React.FC = () => {
     }
   };
 
-  // Filtrar ocorrências
   const filteredOcorrencias = ocorrencias.filter(
     (o) =>
       o.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.descricao.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50">
@@ -101,19 +105,20 @@ const Occurrences: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header com botão de criar */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2"> Gerenciar Ocorrências </h1>
-            <p className="text-gray-600"> Crie, edite e acompanhe todas as ocorrências do sistema </p>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">Gerenciar Ocorrências</h1>
+            <p className="text-gray-600">Crie, edite e acompanhe todas as ocorrências do sistema</p>
           </div>
-          <button onClick={handleOpenCreateModal} className="px-6 py-3 bg-[#4c010c] text-white rounded-xl hover:bg-[#3a0109] transition-all font-bold shadow-lg hover:shadow-xl flex items-center gap-2" >
+          <button 
+            onClick={handleOpenCreateModal} 
+            className="px-6 py-3 bg-[#4c010c] text-white rounded-xl hover:bg-[#3a0109] transition-all font-bold shadow-lg hover:shadow-xl flex items-center gap-2"
+          >
             <Plus className="w-5 h-5" />
             Nova Ocorrência
           </button>
         </div>
 
-        {/* Filtros e Busca */}
         <div className="mb-6 space-y-4">
           <AdvancedFilters
             onFiltersChange={(newFilters) => setFilters(newFilters)}
@@ -134,13 +139,10 @@ const Occurrences: React.FC = () => {
           </div>
         </div>
 
-        {/* Lista de Ocorrências */}
         <div className="space-y-4">
           {filteredOcorrencias.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
-              <p className="text-gray-600 text-lg font-medium">
-                Nenhuma ocorrência encontrada
-              </p>
+              <p className="text-gray-600 text-lg font-medium">Nenhuma ocorrência encontrada</p>
               <button
                 onClick={handleOpenCreateModal}
                 className="mt-4 px-6 py-2 bg-[#4c010c] text-white rounded-lg hover:bg-[#3a0109] transition-colors inline-flex items-center gap-2"
@@ -157,12 +159,8 @@ const Occurrences: React.FC = () => {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-800">
-                      {ocorrencia.titulo}
-                    </h3>
-                    <p className="text-gray-600 mt-2 line-clamp-2">
-                      {ocorrencia.descricao}
-                    </p>
+                    <h3 className="text-xl font-bold text-gray-800">{ocorrencia.titulo}</h3>
+                    <p className="text-gray-600 mt-2 line-clamp-2">{ocorrencia.descricao}</p>
                   </div>
                   <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-xs font-semibold border border-yellow-300 ml-4">
                     #{ocorrencia.id}
@@ -172,31 +170,22 @@ const Occurrences: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                   <div className="text-sm">
                     <span className="text-gray-500">Setor:</span>
-                    <p className="font-medium text-gray-800">
-                      {ocorrencia.setor?.nome || "N/A"}
-                    </p>
+                    <p className="font-medium text-gray-800">{ocorrencia.setor?.nome || "N/A"}</p>
                   </div>
                   <div className="text-sm">
                     <span className="text-gray-500">Status:</span>
-                    <p className="font-medium text-gray-800">
-                      {ocorrencia.status?.nome || "N/A"}
-                    </p>
+                    <p className="font-medium text-gray-800">{ocorrencia.status?.nome || "N/A"}</p>
                   </div>
                   <div className="text-sm">
                     <span className="text-gray-500">Colaborador:</span>
-                    <p className="font-medium text-gray-800">
-                      {ocorrencia.colaborador?.nome || "Não atribuído"}
-                    </p>
+                    <p className="font-medium text-gray-800">{ocorrencia.colaborador?.nome || "Não atribuído"}</p>
                   </div>
                   <div className="text-sm">
                     <span className="text-gray-500">Gestor:</span>
-                    <p className="font-medium text-gray-800">
-                      {ocorrencia.gestor?.nome || "N/A"}
-                    </p>
+                    <p className="font-medium text-gray-800">{ocorrencia.gestor?.nome || "N/A"}</p>
                   </div>
                 </div>
 
-                {/* Novos Campos: URL e Descrição de Execução */}
                 {(ocorrencia.documentacaoUrl || ocorrencia.descricaoExecucao) && (
                   <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
                     {ocorrencia.documentacaoUrl && (
@@ -221,9 +210,7 @@ const Occurrences: React.FC = () => {
                         <FileCheck className="w-4 h-4 text-[#4c010c] mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
                           <span className="text-gray-500 block">Execução:</span>
-                          <p className="text-gray-700 line-clamp-2">
-                            {ocorrencia.descricaoExecucao}
-                          </p>
+                          <p className="text-gray-700 line-clamp-2">{ocorrencia.descricaoExecucao}</p>
                         </div>
                       </div>
                     )}
@@ -255,9 +242,7 @@ const Occurrences: React.FC = () => {
                       <Edit2 className="w-5 h-5 text-yellow-600" />
                     </button>
                     <button
-                      onClick={() =>
-                        setConfirmDelete({ open: true, id: ocorrencia.id })
-                      }
+                      onClick={() => setConfirmDelete({ open: true, id: ocorrencia.id })}
                       className="p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"
                       title="Deletar"
                     >
@@ -271,7 +256,6 @@ const Occurrences: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de Criar/Editar */}
       <EditOccurrence
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
@@ -279,7 +263,6 @@ const Occurrences: React.FC = () => {
         onSuccess={handleSuccess}
       />
 
-      {/* Dialog de Detalhes */}
       {selectedOcorrencia && (
         <TaskDetailDialog
           open={isDialogOpen}
@@ -288,10 +271,10 @@ const Occurrences: React.FC = () => {
             if (!open) setSelectedOcorrencia(null);
           }}
           ocorrencia={selectedOcorrencia}
+          onUpdate={updateOcorrenciaInState}
         />
       )}
 
-      {/* Confirm Delete Dialog */}
       <ConfirmDialog
         open={confirmDelete.open}
         onOpenChange={(open) => setConfirmDelete({ open, id: null })}

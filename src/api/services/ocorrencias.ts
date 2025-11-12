@@ -103,7 +103,7 @@ export const editOcorrencia = async (
 // 🧩 Subtarefas
 export const createSubtarefa = async (
   ocorrenciaId: number,
-  data: { titulo: string; descricao?: string; responsavelId: number }
+  data: { titulo: string; descricao?: string; responsavelId?: number }
 ) => {
   console.log("📎 Criando subtarefa:", data);
   const response = await api.post(
@@ -279,24 +279,17 @@ export const updateStatusViaDrag = async (
     }`
   );
 };
-// 🔄 Atualizar status da ocorrência (mantido para compatibilidade)
+
+// 🔄 Atualizar status da ocorrência (VERSÃO MELHORADA)
 export const updateStatusOcorrencia = async (
   id: number,
   data: { statusId: number }
 ) => {
   const endpoint = ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id);
-  console.log(
-    `🔄 Atualizando status da ocorrência ${id} para status ${data.statusId}`
-  );
+  console.log(`🔄 Atualizando status da ocorrência ${id} para status ${data.statusId}`);
   console.log(`📍 Endpoint: ${endpoint}`);
 
-  const basePayloads = [
-    { statusId: data.statusId },
-    { status_id: data.statusId },
-    { status: { id: data.statusId } },
-    { statusChave: data.statusId },
-  ];
-
+  // Mapeamento de ID para chave de status
   const statusChaveMap: Record<number, string> = {
     1: "em_atribuicao",
     2: "em_fila",
@@ -308,17 +301,21 @@ export const updateStatusOcorrencia = async (
   };
 
   const statusChave = statusChaveMap[data.statusId];
-  const chavePayloads = statusChave
-    ? [
-        { statusChave: statusChave },
-        { status_chave: statusChave },
-        { chave: statusChave },
-        { status: statusChave },
-        { status: { id: data.statusId, chave: statusChave } },
-      ]
-    : [];
 
-  const payloads = [...basePayloads, ...chavePayloads];
+  // Lista de payloads para tentar em ordem de prioridade
+  const payloads = [
+    // Formato 1: Chave de status (compatível com backend NestJS que espera enum string)
+    ...(statusChave ? [{ status: statusChave }] : []),
+    
+    // Formato 2: ID numérico (se o backend aceitar)
+    { statusId: data.statusId },
+    
+    // Formato 3: Objeto status com id
+    { status: { id: data.statusId } },
+    
+    // Formato 4: snake_case
+    { status_id: data.statusId },
+  ];
 
   for (let i = 0; i < payloads.length; i++) {
     const payload = payloads[i];
@@ -327,6 +324,15 @@ export const updateStatusOcorrencia = async (
     try {
       const response = await api.patch(endpoint, payload);
       console.log("✅ Status da ocorrência atualizado:", response.data);
+      
+      // Validar se o status foi realmente atualizado
+      if (response.data.status?.id === data.statusId) {
+        console.log("✅ Status confirmado no retorno!");
+      } else {
+        console.warn("⚠️ Status retornado diferente do esperado");
+        console.warn(`   Esperado: ${data.statusId}, Recebido: ${response.data.status?.id}`);
+      }
+      
       return response.data as Ocorrencia;
     } catch (error: any) {
       console.error(
@@ -345,4 +351,7 @@ export const updateStatusOcorrencia = async (
       throw error;
     }
   }
+  
+  // Fallback - não deve chegar aqui
+  throw new Error("Erro ao atualizar status da ocorrência");
 };
