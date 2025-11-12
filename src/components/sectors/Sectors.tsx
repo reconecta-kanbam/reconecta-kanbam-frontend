@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getSectors } from "../../api/services/sectors";
 import { toast } from "sonner";
 import { Plus, Search, Edit2, Building, Users } from "lucide-react";
-import EditSetor from "./EditSetor";
+import EditSetor from "./EditSectors";
 
 interface Setor {
   id: number;

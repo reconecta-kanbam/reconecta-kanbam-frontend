@@ -12,7 +12,7 @@ import Occurrences from "./components/occurrences/Occurrences";
 import Users from "./components/users/Users";
 import Settings from "./components/settings/Settings";
 import Logs from "./components/logs/Logs";
-import Setores from "./components/setores/Setores";
+import Setores from "./components/sectors/Sectors";
 
 const router = createBrowserRouter([
   {
