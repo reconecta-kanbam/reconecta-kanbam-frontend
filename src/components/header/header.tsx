@@ -107,6 +107,16 @@ const Header: React.FC<HeaderProps> = () => {
                 </Link>
               </li>
 
+              <li className="nav__menu__list__item">
+                <Link
+                  to="/logs"
+                  className="nav__menu__list__item__link"
+                  onClick={closeMenu}
+                >
+                  Logs
+                </Link>
+              </li>
+
               {/* User Dropdown */}
               <li className="nav__menu__list__item relative" ref={dropdownRef}>
                 <button

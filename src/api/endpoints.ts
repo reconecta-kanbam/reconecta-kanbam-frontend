@@ -42,6 +42,9 @@ const ENDPOINTS = {
 
   // KANBAN
   GET_KANBAN_DATA: "/kanban",
+
+  // Log de Auditoria
+  AUDIT_LOGS: "/audit",
 } as const;
 
 export default ENDPOINTS;
