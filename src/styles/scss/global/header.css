@@ -18,8 +18,16 @@
 }
 
 .header__logo__link img {
-  width: 49px;
-  height: 45px;
+    width: auto;
+    height: 60px;
+    transition: 0.45s all;
+}
+
+
+.header__logo :hover {
+  opacity: 0.8;
+  transition: 0.35s all;
+  color: var(--yellow-color-secondary);
 }
 
 .hamburger-menu {
@@ -49,8 +57,8 @@
   font-weight: 600;
   line-height: 1.25rem;
   text-align: center;
-  background-color: var(--details-color);
-  color: var(--white-color);
+  /* background-color: var(--details-color); */
+  color: var(--details-color);
   transition: 0.45s all;
   border: none;
   text-decoration: none;
@@ -58,8 +66,8 @@
 }
 
 .nav__menu__list__item__link:hover {
-  opacity: 0.5;
   transition: 0.35s all;
+  color: var(--yellow-color-secondary);
 }
 
 /* Responsive Styles */

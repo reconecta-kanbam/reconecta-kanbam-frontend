@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown, Settings, LogOut, Users } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/icons/logo-reconecta.png";
 
 interface HeaderProps {
   // adicione props se precisar
@@ -33,7 +33,7 @@ const Header: React.FC<HeaderProps> = () => {
         console.error("Erro ao decodificar token:", error);
       }
     }
-  }, []);
+  }, [location.pathname]); // Adiciona location.pathname como dependência
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,6 +61,34 @@ const Header: React.FC<HeaderProps> = () => {
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  // Função para pegar as iniciais do nome
+  const getInitials = (name: string): string => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Função para gerar cor baseada no nome
+  const getAvatarColor = (name: string): string => {
+    if (!name) return "#4c010c";
+    const colors = [
+      "#4c010c", // vermelho principal
+      "#dc2626", // vermelho
+      "#ea580c", // laranja
+      "#d97706", // amarelo escuro
+      "#059669", // verde
+      "#0891b2", // ciano
+      "#2563eb", // azul
+      "#7c3aed", // roxo
+      "#db2777", // rosa
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
   };
 
   const canManageUsers = userData?.perfil === "ADMIN" || userData?.perfil === "GESTOR";
@@ -131,56 +159,78 @@ const Header: React.FC<HeaderProps> = () => {
               <li className="nav__menu__list__item relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}
-                  className="nav__menu__list__item__link flex items-center gap-2"
+                  className="nav__menu__list__item__link flex items-center gap-3"
                   style={{ cursor: "pointer" }}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>{userData?.nome || "Usuário"}</span>
+                  <div className="flex items-center gap-3">
+                    {/* Avatar com iniciais */}
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md"
+                      style={{ backgroundColor: getAvatarColor(userData?.nome || "U") }}
+                    >
+                      {getInitials(userData?.nome || "Usuário")}
+                    </div>
+                    <span className="hidden md:inline">{userData?.nome || "Usuário"}</span>
                   </div>
                   <ChevronDown
                     size={16}
-                    className={`transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                    className={`hidden md:inline transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-10">
+                    {/* Header do dropdown com avatar maior */}
                     <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-900">{userData?.nome}</p>
-                      <p className="text-xs text-gray-500">{userData?.email}</p>
-                      <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-[#4c010c] text-white rounded">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
+                          style={{ backgroundColor: getAvatarColor(userData?.nome || "U") }}
+                        >
+                          {getInitials(userData?.nome || "Usuário")}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {userData?.nome}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{userData?.email}</p>
+                        </div>
+                      </div>
+                      <span className="inline-block px-2 py-0.5 text-xs font-medium bg-[#4c010c] text-white rounded">
                         {userData?.perfil}
                       </span>
                     </div>
 
-                    {canManageUsers && (
+                    {/* Menu items */}
+                    <div className="py-1">
+                      {canManageUsers && (
+                        <button
+                          onClick={() => {
+                            navigate("/users");
+                            setIsDropdownOpen(false);
+                            closeMenu();
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                        >
+                          <Users size={16} className="text-gray-500" />
+                          Usuários
+                        </button>
+                      )}
+
                       <button
                         onClick={() => {
-                          navigate("/users");
+                          navigate("/settings");
                           setIsDropdownOpen(false);
                           closeMenu();
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                       >
-                        <Users size={16} className="text-gray-500" />
-                        Usuários
+                        <Settings size={16} className="text-gray-500" />
+                        Configurações
                       </button>
-                    )}
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        navigate("/settings");
-                        setIsDropdownOpen(false);
-                        closeMenu();
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
-                    >
-                      <Settings size={16} className="text-gray-500" />
-                      Configurações
-                    </button>
-
-                    <div className="border-t border-gray-100 mt-1 pt-1">
+                    <div className="border-t border-gray-100 pt-1">
                       <button
                         onClick={() => {
                           handleLogout();
