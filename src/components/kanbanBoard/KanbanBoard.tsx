@@ -789,6 +789,7 @@ const KanbanBoard: React.FC = () => {
                           {editingStatus ? (
                             <>
                               <button
+                              onClick={handleUpdateStatus}
                               className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg  transition-colors font-medium"
                               style={{ backgroundColor: 'var(--details-color)' }}
                               >
