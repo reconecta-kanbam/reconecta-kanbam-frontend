@@ -1,3 +1,4 @@
+// src/components/kanbanBoard/KanbanBoard.tsx
 import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { getKanbanData, KanbanFilters } from "../../api/services/kanban";
@@ -7,11 +8,12 @@ import { listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow } from ".
 import { Column, Card } from "../../api/types/kanban";
 import { 
   User, GripVertical, Eye, Calendar, Settings, Plus, Edit2, Trash2, 
-  LayoutGrid, List as ListIcon, Folder, ChevronDown, Move
+  LayoutGrid, List as ListIcon, Folder, ChevronDown, ArrowLeft
 } from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
 import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
 import { listColaboradores, Colaborador } from "../../api/services/usuario";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 type ViewMode = "kanban" | "list";
 type ManagerMode = "status" | "workflow";
@@ -31,6 +33,12 @@ interface OnlineUser {
 }
 
 const KanbanBoard: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  const workflowIdFromUrl = searchParams.get("workflowId");
+  const initialWorkflowId = workflowIdFromUrl ? Number(workflowIdFromUrl) : null;
+
   // Estados principais
   const [columns, setColumns] = useState<Column[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -49,6 +57,7 @@ const KanbanBoard: React.FC = () => {
   const [newStatusChave, setNewStatusChave] = useState("");
   const [newStatusNome, setNewStatusNome] = useState("");
   const [newStatusOrdem, setNewStatusOrdem] = useState<number>(1);
+  const [newStatusWorkflowId, setNewStatusWorkflowId] = useState<number | undefined>(undefined);
 
   // Estados de Workflow
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -58,6 +67,8 @@ const KanbanBoard: React.FC = () => {
 
   // Estados de Usuários Online
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+
+  const [activeWorkflowId, setActiveWorkflowId] = useState<number | null>(initialWorkflowId);
 
   // Estados de notificação e confirmação
   const [notification, setNotification] = useState<{
@@ -73,6 +84,9 @@ const KanbanBoard: React.FC = () => {
     type: "status" | "workflow";
   }>({ open: false, id: null, nome: "", type: "status" });
 
+  // 👇 BUSCAR NOME DO WORKFLOW ATIVO
+  const activeWorkflow = workflows.find(wf => wf.id === activeWorkflowId);
+
   // ==================== FUNÇÕES UTILITÁRIAS ====================
 
   const showNotification = (message: string, type: "success" | "error" = "success") => {
@@ -85,7 +99,11 @@ const KanbanBoard: React.FC = () => {
   const loadKanban = async (currentFilters: FilterOptions = {}) => {
     try {
       setLoading(true);
-      const data = await getKanbanData(currentFilters);
+      const filtersWithWorkflow = {
+        ...currentFilters,
+        ...(activeWorkflowId ? { workflowId: activeWorkflowId } : {}),
+      };
+      const data = await getKanbanData(filtersWithWorkflow);
       setColumns(data);
     } catch (err) {
       showNotification("Erro ao carregar dados do Kanban", "error");
@@ -163,18 +181,16 @@ const KanbanBoard: React.FC = () => {
 
   // ==================== HANDLERS DE STATUS ====================
 
-  // ==================== FUNÇÕES DE AUTOMAÇÃO ====================
-
   const generateChaveFromNome = (nome: string): string => {
     return nome
       .toLowerCase()
       .trim()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-      .replace(/[^a-z0-9\s]/g, "") // Remove caracteres especiais
-      .replace(/\s+/g, "_") // Substitui espaços por underscores
-      .replace(/_+/g, "_") // Remove underscores duplicados
-      .replace(/^_|_$/g, ""); // Remove underscores do início/fim
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "");
   };
 
   const handleCreateStatus = async () => {
@@ -184,22 +200,21 @@ const KanbanBoard: React.FC = () => {
     }
 
     try {
-      // Gerar chave automaticamente a partir do nome
       const chaveGerada = generateChaveFromNome(newStatusNome);
-      
-      // Calcular ordem automaticamente (próximo número disponível)
       const proximaOrdem = columns.filter(c => c.id !== "sem_status").length + 1;
 
       await createStatus({
         chave: chaveGerada,
         nome: newStatusNome.trim(),
         ordem: proximaOrdem,
+        workflowId: newStatusWorkflowId,
       });
 
       showNotification(`Status "${newStatusNome}" criado com sucesso!`, "success");
       setNewStatusChave("");
       setNewStatusNome("");
       setNewStatusOrdem(proximaOrdem + 1);
+      setNewStatusWorkflowId(undefined);
       loadKanban(filters);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
@@ -208,29 +223,31 @@ const KanbanBoard: React.FC = () => {
   };
   
   const handleUpdateStatus = async () => {
-  if (!editingStatus) return;
+    if (!editingStatus) return;
 
-  if (!newStatusChave.trim() || !newStatusNome.trim()) {
-    showNotification("Chave e nome do status são obrigatórios", "error");
-    return;
-  }
+    if (!newStatusChave.trim() || !newStatusNome.trim()) {
+      showNotification("Chave e nome do status são obrigatórios", "error");
+      return;
+    }
 
-  try {
-    await updateStatus(editingStatus.id, {
-      chave: newStatusChave.trim(),
-      nome: newStatusNome.trim(),
-      ordem: editingStatus.ordem, // Mantém a ordem atual
-    });
+    try {
+      await updateStatus(editingStatus.id, {
+        chave: newStatusChave.trim(),
+        nome: newStatusNome.trim(),
+        ordem: editingStatus.ordem,
+        workflowId: newStatusWorkflowId,
+      });
 
-    showNotification("Status atualizado com sucesso!", "success");
-    setEditingStatus(null);
-    setNewStatusChave("");
-    setNewStatusNome("");
-    loadKanban(filters);
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
-    showNotification(`Erro: ${errorMessage}`, "error");
-  }
+      showNotification("Status atualizado com sucesso!", "success");
+      setEditingStatus(null);
+      setNewStatusChave("");
+      setNewStatusNome("");
+      setNewStatusWorkflowId(undefined);
+      loadKanban(filters);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    }
   };
 
   const handleDeleteStatus = async (statusId: number, statusNome: string) => {
@@ -250,21 +267,21 @@ const KanbanBoard: React.FC = () => {
       chave: col.statusChave,
       nome: col.titulo,
       ordem: col.ordem,
+      workflowId: col.workflowId,
     });
     setNewStatusChave(col.statusChave);
     setNewStatusNome(col.titulo);
     setNewStatusOrdem(col.ordem);
+    setNewStatusWorkflowId(col.workflowId);
     setManagerMode("status");
     setShowManager(true);
   };
 
-  // Reordenar colunas localmente
   const handleReorderColumns = async (sourceIndex: number, destIndex: number) => {
     const reorderedColumns = [...columns.filter(c => c.id !== "sem_status")];
     const [movedColumn] = reorderedColumns.splice(sourceIndex, 1);
     reorderedColumns.splice(destIndex, 0, movedColumn);
 
-    // Atualizar ordem localmente
     const updatedColumns = reorderedColumns.map((col, index) => ({
       ...col,
       ordem: index + 1,
@@ -272,19 +289,19 @@ const KanbanBoard: React.FC = () => {
 
     setColumns(updatedColumns);
 
-    // Atualizar no backend
     try {
       for (const col of updatedColumns) {
         await updateStatus(col.statusId, {
           chave: col.statusChave,
           nome: col.titulo,
           ordem: col.ordem,
+          workflowId: col.workflowId,
         });
       }
       showNotification("Ordem das colunas atualizada!", "success");
     } catch (error) {
       showNotification("Erro ao reordenar colunas", "error");
-      loadKanban(filters); // Recarregar em caso de erro
+      loadKanban(filters);
     }
   };
 
@@ -364,20 +381,17 @@ const KanbanBoard: React.FC = () => {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    // Drag de COLUNAS
     if (type === "COLUMN") {
       handleReorderColumns(source.index, destination.index);
       return;
     }
 
-    // Drag de CARDS
     const sourceColumn = columns.find((col) => col.id === source.droppableId);
     const destColumn = columns.find((col) => col.id === destination.droppableId);
     const draggedCard = sourceColumn?.cards.find((card) => card.id === draggableId);
 
     if (!draggedCard || !draggedCard.ocorrencia || !destColumn) return;
 
-    // Optimistic update
     const newColumns = [...columns];
     const sourceColIndex = newColumns.findIndex((col) => col.id === source.droppableId);
     const destColIndex = newColumns.findIndex((col) => col.id === destination.droppableId);
@@ -417,7 +431,6 @@ const KanbanBoard: React.FC = () => {
 
       showNotification(`Card movido para "${destColumn.titulo}" com sucesso!`);
     } catch (error) {
-      // Reverter mudanças
       const revertedColumns = [...columns];
       const revertSourceIndex = revertedColumns.findIndex((col) => col.id === source.droppableId);
       const revertDestIndex = revertedColumns.findIndex((col) => col.id === destination.droppableId);
@@ -434,43 +447,48 @@ const KanbanBoard: React.FC = () => {
     }
   };
 
-   // ==================== Lista de usuários  ====================
+  // ==================== USUÁRIOS ONLINE ====================
 
-    const getInitials = (nome: string): string => {
+  const getInitials = (nome: string): string => {
     const words = nome.trim().split(" ");
-      if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
-      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-    };
+    if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  };
 
-    const getRandomColor = (): string => {
-      const colors = [
-        "#4c010c", "#6a0110", "#8b0000", "#a52a2a", "#c41e3a",
-        "#dc143c", "#ff6347", "#ff4500", "#ff8c00", "#ffa500"
-      ];
-      return colors[Math.floor(Math.random() * colors.length)];
-    };
+  const getRandomColor = (): string => {
+    const colors = [
+      "#4c010c", "#6a0110", "#8b0000", "#a52a2a", "#c41e3a",
+      "#dc143c", "#ff6347", "#ff4500", "#ff8c00", "#ffa500"
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
-    const loadOnlineUsers = async () => {
-      try {
-        const colaboradores = await listColaboradores();
-        const users = colaboradores.slice(0, 10).map((colab) => ({
-          id: colab.id,
-          nome: colab.nome,
-          email: colab.email,
-          iniciais: getInitials(colab.nome),
-          cor: getRandomColor(),
-        }));
-        setOnlineUsers(users);
-      } catch (error) {
-        console.error("Erro ao carregar usuários online:", error);
-      }
-    };
+  const loadOnlineUsers = async () => {
+    try {
+      const colaboradores = await listColaboradores();
+      const users = colaboradores.slice(0, 10).map((colab) => ({
+        id: colab.id,
+        nome: colab.nome,
+        email: colab.email,
+        iniciais: getInitials(colab.nome),
+        cor: getRandomColor(),
+      }));
+      setOnlineUsers(users);
+    } catch (error) {
+      console.error("Erro ao carregar usuários online:", error);
+    }
+  };
+
   // ==================== EFFECTS ====================
 
   useEffect(() => {
-    loadKanban(filters);
+    loadWorkflows();
     loadOnlineUsers();
-  }, [filters]);
+  }, []);
+
+  useEffect(() => {
+    loadKanban(filters);
+  }, [activeWorkflowId, filters]);
 
   useEffect(() => {
     if (showManager && managerMode === "workflow") {
@@ -501,16 +519,33 @@ const KanbanBoard: React.FC = () => {
       <section className="pgKanbanBoard__workflowBar">
         <div className="container">
           <div className="pgKanbanBoard__workflowBar__left">
-            <h1 className="pgKanbanBoard__workflowBar__left__title">Sistema de Ocorrências</h1>
+            {/* 👇 NOVO: Botão de Voltar + Nome do Workflow */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/workflows')}
+                className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                title="Voltar para Workflows"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <div>
+                <h1 className="pgKanbanBoard__workflowBar__left__title">
+                  {activeWorkflow?.nome || "Workflow"}
+                </h1>
+                {activeWorkflow?.descricao && (
+                  <p className="text-sm text-gray-500 mt-0.5">{activeWorkflow.descricao}</p>
+                )}
+              </div>
+            </div>
+            
             <span className="pgKanbanBoard__workflowBar__left__badge">{totalCards} cards</span>
           </div>
 
           <div className="pgKanbanBoard__workflowBar__right">
-            {/* Usuários Online - Dados do Backend */}
+            {/* Usuários Online */}
             <div className="pgKanbanBoard__workflowBar__right__UsuáriosOn">
               {onlineUsers.length > 0 && (
                 <div className="flex items-center gap-2 mr-4">
-                  {/* Primeiros 5 usuários */}
                   {onlineUsers.slice(0, 5).map((user) => (
                     <div key={user.id} className="relative group">
                       <div
@@ -519,24 +554,20 @@ const KanbanBoard: React.FC = () => {
                       >
                         {user.iniciais}
                       </div>
-                      {/* Tooltip */}
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                         <div className="font-semibold">{user.nome}</div>
                         <div className="text-gray-300 text-[10px] mt-0.5">{user.email}</div>
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                       </div>
-                      {/* Indicador Online */}
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                     </div>
                   ))}
 
-                  {/* Botão +N (se houver mais de 5 usuários) */}
                   {onlineUsers.length > 5 && (
                     <div className="relative group">
                       <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer transition-transform hover:scale-110 shadow-md border-2 border-white">
                         +{onlineUsers.length - 5}
                       </div>
-                      {/* Tooltip com lista de usuários adicionais */}
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                         <div className="font-semibold mb-1">
                           Mais {onlineUsers.length - 5} {onlineUsers.length - 5 === 1 ? "usuário" : "usuários"}
@@ -569,84 +600,82 @@ const KanbanBoard: React.FC = () => {
       </section>
 
       <section className="pgKanbanBoard__access">
-          <div className="container">
-
-              {/* Toggle de Visualização */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode("kanban")}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${
-                    viewMode === "kanban"
-                      ? "bg-white text-[#4c010c] shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="Visualização em Kanban"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  <span className="text-sm font-medium">Kanban</span>
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${
-                    viewMode === "list"
-                      ? "bg-white text-[#4c010c] shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="Visualização em Lista"
-                >
-                  <ListIcon className="w-4 h-4" />
-                  <span className="text-sm font-medium">Lista</span>
-                </button>
-              </div>
-
-              {/* Dropdown de Gerenciamento */}
-              <div className="relative group">
-                <button
-                  className="flex items-center gap-2 px-4 py-2 bg-[#4c010c] text-white rounded-lg hover:bg-[#6a0110] transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span>Gerenciar</span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-
-                {/* Dropdown Menu */}
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                  <div className="p-2">
-                    <button
-                      onClick={() => {
-                        setManagerMode("status");
-                        setShowManager(true);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg transition-colors text-left"
-                    >
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Settings className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900">Status</div>
-                        <div className="text-xs text-gray-500">Gerenciar colunas do Kanban</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setManagerMode("workflow");
-                        setShowManager(true);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 rounded-lg transition-colors text-left"
-                    >
-                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <Folder className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900">Workflows</div>
-                        <div className="text-xs text-gray-500">Agrupar ocorrências</div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <div className="container">
+          {/* Toggle de Visualização */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${
+                viewMode === "kanban"
+                  ? "bg-white text-[#4c010c] shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Visualização em Kanban"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="text-sm font-medium">Kanban</span>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${
+                viewMode === "list"
+                  ? "bg-white text-[#4c010c] shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              title="Visualização em Lista"
+            >
+              <ListIcon className="w-4 h-4" />
+              <span className="text-sm font-medium">Lista</span>
+            </button>
           </div>
+
+          {/* Dropdown de Gerenciamento */}
+          <div className="relative group">
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-[#4c010c] text-white rounded-lg hover:bg-[#6a0110] transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+              <span>Gerenciar</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <div className="p-2">
+                <button
+                  onClick={() => {
+                    setManagerMode("status");
+                    setShowManager(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg transition-colors text-left"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900">Status</div>
+                    <div className="text-xs text-gray-500">Gerenciar colunas do Kanban</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setManagerMode("workflow");
+                    setShowManager(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 rounded-lg transition-colors text-left"
+                >
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Folder className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900">Workflows</div>
+                    <div className="text-xs text-gray-500">Agrupar ocorrências</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {loading ? (
@@ -685,7 +714,6 @@ const KanbanBoard: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* Toggle entre Status e Workflow */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
                       <button
                         onClick={() => setManagerMode("status")}
@@ -717,6 +745,7 @@ const KanbanBoard: React.FC = () => {
                         setNewStatusChave("");
                         setNewStatusNome("");
                         setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+                        setNewStatusWorkflowId(undefined);
                         setNewWorkflowNome("");
                         setNewWorkflowDesc("");
                       }}
@@ -738,7 +767,8 @@ const KanbanBoard: React.FC = () => {
                           {editingStatus ? "Editar Status" : "Criar Novo Status"}
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          {/* Nome */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Nome *</label>
                             <input
@@ -747,15 +777,15 @@ const KanbanBoard: React.FC = () => {
                               onChange={(e) => {
                                 const nome = e.target.value;
                                 setNewStatusNome(nome);
-                                
-                                // Auto-preencher chave enquanto digita (tanto ao criar quanto ao editar)
                                 const chaveGerada = generateChaveFromNome(nome);
                                 setNewStatusChave(chaveGerada);
                               }}
                               placeholder="Ex: Em Desenvolvimento"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                             />
                           </div>
 
+                          {/* Chave */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               Chave * {!editingStatus && <span className="text-xs text-gray-500">(gerada automaticamente)</span>}
@@ -766,9 +796,9 @@ const KanbanBoard: React.FC = () => {
                               onChange={(e) => setNewStatusChave(e.target.value)}
                               placeholder="desenvolvimento_teste"
                               disabled={!editingStatus && !newStatusChave}
-                              className={`${
+                              className={`w-full px-4 py-2 border rounded-lg ${
                                 editingStatus || newStatusChave
-                                  ? "focus:ring-2 " 
+                                  ? "focus:ring-2 focus:ring-blue-500"
                                   : "bg-gray-50 text-gray-500 cursor-not-allowed"
                               }`}
                             />
@@ -777,11 +807,27 @@ const KanbanBoard: React.FC = () => {
                                 ✓ Chave gerada: <code className="bg-green-50 px-1 rounded">{newStatusChave}</code>
                               </p>
                             )}
-                            {editingStatus && (
-                              <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                                ℹ️ Você pode editar a chave manualmente
-                              </p>
-                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Workflow (opcional)
+                            </label>
+                            <select
+                              value={newStatusWorkflowId || ""}
+                              onChange={(e) => setNewStatusWorkflowId(e.target.value ? Number(e.target.value) : undefined)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Nenhum (Global)</option>
+                              {workflows.map((wf) => (
+                                <option key={wf.id} value={wf.id}>
+                                  {wf.nome}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Status globais aparecem em todos os workflows
+                            </p>
                           </div>
                         </div>
 
@@ -789,9 +835,9 @@ const KanbanBoard: React.FC = () => {
                           {editingStatus ? (
                             <>
                               <button
-                              onClick={handleUpdateStatus}
-                              className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg  transition-colors font-medium"
-                              style={{ backgroundColor: 'var(--details-color)' }}
+                                onClick={handleUpdateStatus}
+                                className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg transition-colors font-medium"
+                                style={{ backgroundColor: 'var(--details-color)' }}
                               >
                                 Salvar Alterações
                               </button>
@@ -801,6 +847,7 @@ const KanbanBoard: React.FC = () => {
                                   setNewStatusChave("");
                                   setNewStatusNome("");
                                   setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+                                  setNewStatusWorkflowId(undefined);
                                 }}
                                 className="px-6 py-2 border border-gray-300 text-white rounded-lg hover:bg-gray-100 transition-colors font-medium"
                                 style={{ backgroundColor: 'var(--cancel-bg)' }}
@@ -811,7 +858,7 @@ const KanbanBoard: React.FC = () => {
                           ) : (
                             <button
                               onClick={handleCreateStatus}
-                              className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg  transition-colors font-medium"
+                              className="flex-1 bg-red-50 text-white px-6 py-2 rounded-lg transition-colors font-medium"
                               style={{ backgroundColor: 'var(--details-color)' }}
                             >
                               Criar Status
@@ -826,10 +873,6 @@ const KanbanBoard: React.FC = () => {
                           <h3 className="text-lg font-semibold text-gray-700">
                             Status Existentes ({columns.filter((col) => col.id !== "sem_status").length})
                           </h3>
-                          {/* <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Move className="w-4 h-4" />
-                            <span>Arraste para reordenar</span>
-                          </div> */}
                         </div>
 
                         {columns.filter((col) => col.id !== "sem_status").length === 0 ? (
@@ -882,6 +925,11 @@ const KanbanBoard: React.FC = () => {
                                                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
                                                     #{col.ordem}
                                                   </span>
+                                                  {col.workflowId && (
+                                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
+                                                      Workflow: {workflows.find(w => w.id === col.workflowId)?.nome || col.workflowId}
+                                                    </span>
+                                                  )}
                                                 </div>
                                                 <p className="text-xs text-gray-500 mb-2">
                                                   Chave:{" "}
@@ -982,7 +1030,7 @@ const KanbanBoard: React.FC = () => {
                                   setNewWorkflowNome("");
                                   setNewWorkflowDesc("");
                                 }}
-                                className="px-6 py-2 border bg-red-50r-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                               >
                                 Cancelar
                               </button>
@@ -1104,146 +1152,142 @@ const KanbanBoard: React.FC = () => {
           )}
 
           {/* VISUALIZAÇÃO KANBAN */}
-         {/* VISUALIZAÇÃO KANBAN */}
-{viewMode === "kanban" && columns.length > 0 && (
-  <DragDropContext onDragEnd={onDragEnd}>
-    <Droppable droppableId="all-columns" direction="horizontal" type="COLUMN">
-      {(provided) => (
-        <section 
-          className="pgKanbanBoard__Workflows"
-          ref={provided.innerRef}
-          {...provided.droppableProps}
-        >
-          <div className="container">
-            {columns
-              .filter((col) => col.id !== "sem_status")
-              .sort((a, b) => a.ordem - b.ordem)
-              .map((col, colIndex) => (
-                <Draggable key={col.id} draggableId={col.id} index={colIndex} isDragDisabled={false}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      className={`pgKanbanBoard__Workflows__column ${
-                        snapshot.isDragging ? "opacity-50" : ""
-                      }`}
-                    >
-                      {/* Header da Coluna */}
-                      <div 
-                        {...provided.dragHandleProps}
-                        className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200 cursor-grab active:cursor-grabbing hover:bg-gray-50 -mx-4 px-4 py-2 rounded-t-lg"
-                        title="Arraste para reordenar coluna"
-                      >
-                        <div className="flex items-center gap-2">
-                          <GripVertical className="w-5 h-5 text-gray-400" />
-                          <h3 className="text-xl font-bold text-gray-800">{col.titulo}</h3>
-                        </div>
-                        <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
-                          {col.cards.length}
-                        </span>
-                      </div>
+          {viewMode === "kanban" && columns.length > 0 && (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="all-columns" direction="horizontal" type="COLUMN">
+                {(provided) => (
+                  <section 
+                    className="pgKanbanBoard__Workflows"
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                  >
+                    <div className="container">
+                      {columns
+                        .filter((col) => col.id !== "sem_status")
+                        .sort((a, b) => a.ordem - b.ordem)
+                        .map((col, colIndex) => (
+                          <Draggable key={col.id} draggableId={col.id} index={colIndex} isDragDisabled={false}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`pgKanbanBoard__Workflows__column ${
+                                  snapshot.isDragging ? "opacity-50" : ""
+                                }`}
+                              >
+                                <div 
+                                  {...provided.dragHandleProps}
+                                  className="flex justify-between items-center mb-4 pb-3 border-b-2 border-gray-200 cursor-grab active:cursor-grabbing hover:bg-gray-50 -mx-4 px-4 py-2 rounded-t-lg"
+                                  title="Arraste para reordenar coluna"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <GripVertical className="w-5 h-5 text-gray-400" />
+                                    <h3 className="text-xl font-bold text-gray-800">{col.titulo}</h3>
+                                  </div>
+                                  <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
+                                    {col.cards.length}
+                                  </span>
+                                </div>
 
-                      {/* Droppable Area com Altura Dinâmica */}
-                      <Droppable droppableId={col.id} type="CARD">
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className={`pgKanbanBoard__Workflows__column__content ${
-                              col.cards.length === 0 ? "pgKanbanBoard__Workflows__column__content--empty" : ""
-                            }`}
-                            style={{
-                              backgroundColor: snapshot.isDraggingOver ? "#fef2f2" : "transparent",
-                              borderRadius: snapshot.isDraggingOver ? "0.5rem" : "0",
-                              padding: snapshot.isDraggingOver ? "0.5rem" : "0",
-                              transition: "background-color 0.2s ease",
-                            }}
-                          >
-                            {col.cards.length > 0 ? (
-                              <div className="space-y-3  mr-3">
-                                {col.cards.map((card, index) => (
-                                  <Draggable key={card.id} draggableId={card.id} index={index}>
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        onClick={() => {
-                                          setSelectedCard(card);
-                                          setDetailOpen(true);
-                                        }}
-                                        className={`bg-gradient-to-br from-gray-50 to-slate-50 hover:from-red-50 hover:to-rose-50 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all border-2 ${
-                                          snapshot.isDragging
-                                            ? "border-[#4c010c] shadow-2xl rotate-2 scale-105"
-                                            : "border-gray-200 hover:border-[#4c010c] hover:shadow-lg"
-                                        }`}
-                                      >
-                                        <div className="flex items-start gap-2 mb-3">
-                                          <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                                          <h4 className="font-semibold text-gray-800 flex-1 leading-snug">
-                                            {card.titulo}
-                                          </h4>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedCard(card);
-                                              setDetailOpen(true);
-                                            }}
-                                            aria-label="Ver detalhes"
-                                            className="p-1 rounded hover:bg-gray-100 ml-2"
-                                          >
-                                            <Eye className="w-5 h-5 text-gray-500" />
-                                          </button>
+                                <Droppable droppableId={col.id} type="CARD">
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                      className={`pgKanbanBoard__Workflows__column__content ${
+                                        col.cards.length === 0 ? "pgKanbanBoard__Workflows__column__content--empty" : ""
+                                      }`}
+                                      style={{
+                                        backgroundColor: snapshot.isDraggingOver ? "#fef2f2" : "transparent",
+                                        borderRadius: snapshot.isDraggingOver ? "0.5rem" : "0",
+                                        padding: snapshot.isDraggingOver ? "0.5rem" : "0",
+                                        transition: "background-color 0.2s ease",
+                                      }}
+                                    >
+                                      {col.cards.length > 0 ? (
+                                        <div className="space-y-3 mr-3">
+                                          {col.cards.map((card, index) => (
+                                            <Draggable key={card.id} draggableId={card.id} index={index}>
+                                              {(provided, snapshot) => (
+                                                <div
+                                                  ref={provided.innerRef}
+                                                  {...provided.draggableProps}
+                                                  {...provided.dragHandleProps}
+                                                  onClick={() => {
+                                                    setSelectedCard(card);
+                                                    setDetailOpen(true);
+                                                  }}
+                                                  className={`bg-gradient-to-br from-gray-50 to-slate-50 hover:from-red-50 hover:to-rose-50 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all border-2 ${
+                                                    snapshot.isDragging
+                                                      ? "border-[#4c010c] shadow-2xl rotate-2 scale-105"
+                                                      : "border-gray-200 hover:border-[#4c010c] hover:shadow-lg"
+                                                  }`}
+                                                >
+                                                  <div className="flex items-start gap-2 mb-3">
+                                                    <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                    <h4 className="font-semibold text-gray-800 flex-1 leading-snug">
+                                                      {card.titulo}
+                                                    </h4>
+                                                    <button
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedCard(card);
+                                                        setDetailOpen(true);
+                                                      }}
+                                                      aria-label="Ver detalhes"
+                                                      className="p-1 rounded hover:bg-gray-100 ml-2"
+                                                    >
+                                                      <Eye className="w-5 h-5 text-gray-500" />
+                                                    </button>
+                                                  </div>
+
+                                                  {card.colaboradorNome && (
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
+                                                      <User className="w-4 h-4 text-[#4c010c] flex-shrink-0" />
+                                                      <span className="font-medium truncate">
+                                                        {card.colaboradorNome}
+                                                      </span>
+                                                    </div>
+                                                  )}
+
+                                                  {card.createdAt && (
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
+                                                      <Calendar className="w-4 h-4 text-[#4c010c]" />
+                                                      <span className="font-medium">
+                                                        {new Date(card.createdAt).toLocaleDateString("pt-BR")}
+                                                      </span>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </Draggable>
+                                          ))}
                                         </div>
+                                      ) : (
+                                        <div className="flex items-center justify-center h-full w-full">
+                                          <p className="text-gray-400 text-sm italic text-center py-6 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                                            Arraste cards para cá
+                                          </p>
+                                        </div>
+                                      )}
 
-                                        {card.colaboradorNome && (
-                                          <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
-                                            <User className="w-4 h-4 text-[#4c010c] flex-shrink-0" />
-                                            <span className="font-medium truncate">
-                                              {card.colaboradorNome}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {card.createdAt && (
-                                          <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
-                                            <Calendar className="w-4 h-4 text-[#4c010c]" />
-                                            <span className="font-medium">
-                                              {new Date(card.createdAt).toLocaleDateString("pt-BR")}
-                                            </span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ))}
-                              </div>
-                            ) : (
-                              /* Estado Vazio */
-                              <div className="flex items-center justify-center h-full w-full">
-                                <p className="text-gray-400 text-sm italic text-center py-6 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                                  Arraste cards para cá
-                                </p>
+                                      {provided.placeholder}
+                                    </div>
+                                  )}
+                                </Droppable>
                               </div>
                             )}
-
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
+                          </Draggable>
+                        ))}
+                      {provided.placeholder}
                     </div>
-                  )}
-                </Draggable>
-              ))}
-            {provided.placeholder}
-          </div>
-        </section>
-      )}
-    </Droppable>
-  </DragDropContext>
-)}
+                  </section>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
 
-          {/* VISUALIZAÇÃO LISTA MELHORADA */}
+          {/* VISUALIZAÇÃO LISTA */}
           {viewMode === "list" && (
             <section className="px-8 py-6 bg-gray-50 min-h-screen">
               <div className="max-w-7xl mx-auto">
@@ -1255,7 +1299,6 @@ const KanbanBoard: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Header da Lista */}
                     <div className="bg-white rounded-t-2xl border-b-2 border-gray-200 px-6 py-4 mb-2 shadow-sm">
                       <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600 uppercase tracking-wide">
                         <div className="col-span-4">Título</div>
@@ -1266,7 +1309,6 @@ const KanbanBoard: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Lista de Cards */}
                     <div className="bg-white rounded-b-2xl shadow-sm divide-y divide-gray-100">
                       {allCards.map((card) => (
                         <div
@@ -1278,21 +1320,18 @@ const KanbanBoard: React.FC = () => {
                           className="px-6 py-4 hover:bg-blue-50 transition-all cursor-pointer group"
                         >
                           <div className="grid grid-cols-12 gap-4 items-center">
-                            {/* Título */}
                             <div className="col-span-4">
                               <h3 className="font-semibold text-gray-900 group-hover:text-[#4c010c] transition-colors">
                                 {card.titulo}
                               </h3>
                             </div>
 
-                            {/* Status */}
                             <div className="col-span-2">
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
                                 {card.columnTitle}
                               </span>
                             </div>
 
-                            {/* Responsável */}
                             <div className="col-span-3">
                               {card.colaboradorNome ? (
                                 <div className="flex items-center gap-2">
@@ -1308,7 +1347,6 @@ const KanbanBoard: React.FC = () => {
                               )}
                             </div>
 
-                            {/* Data */}
                             <div className="col-span-2">
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Calendar className="w-4 h-4 text-gray-400" />
@@ -1322,7 +1360,6 @@ const KanbanBoard: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* Ações */}
                             <div className="col-span-1 flex justify-end">
                               <button
                                 onClick={(e) => {
@@ -1341,7 +1378,6 @@ const KanbanBoard: React.FC = () => {
                       ))}
                     </div>
 
-                    {/* Footer com Total */}
                     <div className="mt-4 bg-white rounded-xl px-6 py-3 shadow-sm">
                       <p className="text-sm text-gray-600">
                         Total: <span className="font-semibold text-gray-900">{allCards.length}</span>{" "}

@@ -7,18 +7,21 @@ export interface Status {
   chave: string;
   nome: string;
   ordem: number;
+  workflowId?: number;
 }
 
 export interface CreateStatusRequest {
   chave: string;
   nome: string;
   ordem: number;
+  workflowId?: number;
 }
 
 export interface UpdateStatusRequest {
   chave?: string;
   nome?: string;
   ordem?: number;
+  workflowId?: number;
 }
 
 // Lista todos os status ordenados

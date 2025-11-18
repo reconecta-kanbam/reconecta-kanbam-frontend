@@ -1,3 +1,4 @@
+// src/main.tsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -5,7 +6,7 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 
 /* ============ Pages =========== */
-import KanbanBoard from "./components/kanbanBoard/KanbanBoard";
+import KanbanBoard from "./components/kanbanBoard/KanbanBoard"; // 👈 DESCOMENTE/IMPORTE
 import AuthPg from "./components/login/AuthPg";
 import PrivateRoute from "./components/PrivateRoute/PrivateRoute";
 import Occurrences from "./components/occurrences/Occurrences";
@@ -13,6 +14,7 @@ import Users from "./components/users/Users";
 import Settings from "./components/settings/Settings";
 import Logs from "./components/logs/Logs";
 import Setores from "./components/sectors/Sectors";
+import Workflows from "./components/workflows/Workflows";
 
 const router = createBrowserRouter([
   {
@@ -24,7 +26,15 @@ const router = createBrowserRouter([
         element: <AuthPg />,
       },
       {
-        path: "kanban-board",
+        path: "workflows",
+        element: (
+          <PrivateRoute>
+            <Workflows />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "kanban-board", // 👈 ADICIONE ESTA ROTA
         element: (
           <PrivateRoute>
             <KanbanBoard />
@@ -71,12 +81,11 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-      // Redireciona raiz para kanbanBoard
       {
         index: true,
         element: (
           <PrivateRoute>
-            <KanbanBoard />
+            <Workflows />
           </PrivateRoute>
         ),
       },

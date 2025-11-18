@@ -42,7 +42,7 @@ const AuthPg: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/kanban-board', { replace: true });
+      navigate('/workflows', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -126,7 +126,7 @@ const AuthPg: React.FC = () => {
       showSuccess(SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS);
       
       setTimeout(() => {
-        navigate('/kanban-board');
+        navigate('/workflows');
       }, 1000);
     } catch (err: any) {
       const message = err.response?.data?.message || ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS;

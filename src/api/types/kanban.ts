@@ -19,6 +19,7 @@ export interface Column {
   statusId: number;
   statusChave: string;
   ordem: number;
+  workflowId?: number;
   cards: Card[];
 }
 
@@ -27,4 +28,5 @@ export interface Status {
   chave: string;
   nome: string;
   ordem: number;
+  workflowId?: number; 
 }
