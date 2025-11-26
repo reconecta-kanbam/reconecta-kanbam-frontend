@@ -56,14 +56,30 @@ const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSuccess }) => 
         return;
       }
 
-      await api.post("/users", {
+      // CORREÇÃO: Validar setorId antes de enviar
+      const setorIdParsed = parseInt(formData.setorId);
+      if (!formData.setorId || isNaN(setorIdParsed)) {
+        setError("Selecione um setor válido");
+        setIsLoading(false);
+        return;
+      }
+
+      const payload: any = {
         nome: formData.nome,
         email: formData.email,
         senha: formData.senha,
         perfil: formData.perfil,
-        setorId: parseInt(formData.setorId),
         peso: peso,
-      });
+      };
+
+      // CORREÇÃO: Só adiciona setorId se for um número válido
+      if (!isNaN(setorIdParsed) && setorIdParsed > 0) {
+        payload.setorId = setorIdParsed;
+      }
+
+      console.log("📤 Criando usuário com payload:", payload);
+
+      await api.post("/users", payload);
 
       toast.success("Usuário criado com sucesso!");
       setFormData({
@@ -198,6 +214,11 @@ const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSuccess }) => 
                   </option>
                 ))}
               </select>
+              {setores.length === 0 && (
+                <p className="mt-1 text-xs text-red-500">
+                  Nenhum setor disponível. Verifique o backend.
+                </p>
+              )}
             </div>
 
             <div>

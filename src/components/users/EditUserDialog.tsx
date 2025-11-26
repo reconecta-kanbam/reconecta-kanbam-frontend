@@ -37,11 +37,14 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
 
   useEffect(() => {
     if (isOpen && user) {
+      // CORREÇÃO: Buscar setorId do objeto setor se disponível
+      const setorId = user.setorId || user.setor?.id || "";
+      
       setFormData({
         nome: user.nome || "",
         email: user.email || "",
         perfil: user.perfil || "COLABORADOR",
-        setorId: user.setorId?.toString() || "",
+        setorId: setorId.toString(),
         peso: user.peso?.toString() || "1",
       });
       loadSetores();
@@ -54,6 +57,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       setSetores(response.data);
     } catch (error) {
       console.error("Erro ao carregar setores:", error);
+      toast.error("Erro ao carregar setores");
     }
   };
 
@@ -82,25 +86,42 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       return;
     }
 
+    // CORREÇÃO: Validar setorId antes de enviar
+    const setorIdParsed = parseInt(formData.setorId);
+    if (!formData.setorId || isNaN(setorIdParsed)) {
+      setError("Selecione um setor válido");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
     try {
-      // Tentar atualizar dados completos do usuário
-      await api.patch(`/users/${user.id}`, {
+      const payload: any = {
         nome: formData.nome,
         email: formData.email,
-        perfil: formData.perfil,
-        setorId: parseInt(formData.setorId),
         peso: peso,
-      });
+      };
+
+      // CORREÇÃO: Só adiciona perfil se puder editar
+      if (canEditPerfil()) {
+        payload.perfil = formData.perfil;
+      }
+
+      // CORREÇÃO: Só adiciona setorId se for um número válido
+      if (!isNaN(setorIdParsed) && setorIdParsed > 0) {
+        payload.setorId = setorIdParsed;
+      }
+
+      console.log(`📤 Atualizando usuário ${user.id} com payload:`, payload);
+
+      await api.patch(`/users/${user.id}`, payload);
 
       toast.success("Usuário atualizado com sucesso!");
       onSuccess();
     } catch (error: any) {
       console.error("Erro ao atualizar usuário:", error);
       
-      // Se o endpoint não existir, mostrar mensagem clara
       if (error.response?.status === 404 || error.response?.status === 405) {
         setError(
           "⚠️ Endpoint PATCH /users/:id não está implementado no backend. " +
@@ -229,6 +250,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                   </option>
                 ))}
               </select>
+              {setores.length === 0 && (
+                <p className="mt-1 text-xs text-red-500">
+                  Nenhum setor disponível. Verifique o backend.
+                </p>
+              )}
             </div>
 
             <div>

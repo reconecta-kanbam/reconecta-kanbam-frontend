@@ -2,62 +2,64 @@ export interface Ocorrencia {
   id: number;
   titulo: string;
   descricao: string;
-  status: {
+  status?: {
     id: number;
+    nome: string;
     chave: string;
+    ordem?: number;
+  };
+  setor?: {
+    id: number;
     nome: string;
-    ordem: number;
-  } | null;
-  gestor: {
+  };
+  gestor?: {
     id: number;
     nome: string;
     email: string;
-    perfil: string;
-  } | null;
-  colaborador: {
+    perfil?: string;
+  };
+  colaborador?: {
     id: number;
     nome: string;
     email: string;
-    perfil: string;
-  } | null;
-  setor: {
+    perfil?: string;
+  };
+  workflow?: {
     id: number;
     nome: string;
-  } | null;
-  documentacaoUrl: string | null;
-  descricaoExecucao: string | null;
-  createdAt: string;
-  workflowId?: number;
-  updatedAt: string;
-  subtarefas: {
-    id: number;
-    titulo: string;
     descricao?: string;
-    status?: string;
-    createdAt: string;
-    responsavel?: {
-      id: number;
-      nome: string;
-      email: string;
-    };
-  }[];
-  historicos: {
-    id: number;
-    dataHora: string;
-  }[];
+  };
+  workflowId?: number | null;
+  documentacaoUrl?: string | null;
+  descricaoExecucao?: string | null;
+  subtarefas?: Subtarefa[];
+  historicos?: HistoricoStatus[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Subtarefa {
   id: number;
   titulo: string;
   descricao?: string;
-  status?: string;
-  createdAt: string;
+  status: string;
   responsavel?: {
     id: number;
     nome: string;
     email: string;
+    perfil?: string;
   };
+  createdAt: string;
+}
+
+export interface HistoricoStatus {
+  id: number;
+  status?: {
+    id: number;
+    nome: string;
+    chave: string;
+  };
+  dataHora: string;
 }
 
 export interface CreateOcorrenciaRequest {
@@ -65,14 +67,28 @@ export interface CreateOcorrenciaRequest {
   descricao: string;
   setorId: number;
   colaboradorId?: number;
-  colaboradorNome?: string;
-  statusId?: number; // Adicionado para permitir escolha do status na criação
+  autoAtribuir?: boolean;
+  statusId?: number;
   workflowId?: number;
-  documentacaoUrl?: string; // NOVO
-  descricaoExecucao?: string; // NOVO
+  documentacaoUrl?: string;
+  descricaoExecucao?: string;
 }
 
-export interface Setor {
-  id: number;
-  nome: string;
+export interface EditOcorrenciaRequest {
+  titulo?: string;
+  descricao?: string;
+  setorId?: number;
+  statusId?: number | null;
+  documentacaoUrl?: string;
+  descricaoExecucao?: string;
+  workflowId?: number | null;
+}
+
+export interface AtribuirOcorrenciaRequest {
+  colaboradorId?: number;
+  auto?: boolean;
+}
+
+export interface UpdateStatusRequest {
+  statusId: number;
 }

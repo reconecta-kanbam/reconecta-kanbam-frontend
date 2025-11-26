@@ -1,21 +1,48 @@
 import React, { useState, useEffect } from "react";
-import { Save, User, Mail, Shield, Lock, AlertCircle } from "lucide-react";
+import {
+  User,
+  Mail,
+  Lock,
+  Building2,
+  Save,
+  Eye,
+  EyeOff,
+  Shield,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  updateMe,
+  getCurrentUserFromToken,
+  Colaborador,
+} from "../../api/services/usuario";
+import { getSectors } from "../../api/services/sectors";
 import api from "../../api/api";
 
+interface Setor {
+  id: number;
+  nome: string;
+}
+
 const Settings: React.FC = () => {
-  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [setores, setSetores] = useState<Setor[]>([]);
+  const [userData, setUserData] = useState<Colaborador | null>(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    peso: "",
-    senhaAtual: "",
-    novaSenha: "",
-    confirmarSenha: "",
+    senha: "",
+    confirmSenha: "",
+    setorId: 0,
   });
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [canEditAdvanced, setCanEditAdvanced] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -23,118 +50,133 @@ const Settings: React.FC = () => {
 
   const loadUserData = async () => {
     try {
-      setLoadingData(true);
-      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
-      
-      if (token) {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const userId = payload.sub;
-        const userPerfil = payload.perfil;
+      setLoading(true);
+      setError("");
 
-        // Define se pode editar campos avançados (ADMIN e GESTOR)
-        setCanEditAdvanced(userPerfil === "ADMIN" || userPerfil === "GESTOR");
-
-        try {
-          const response = await api.get(`/users/${userId}`);
-          const user = response.data;
-
-          setUserData(user);
-          setFormData({
-            nome: user.nome || "",
-            email: user.email || "",
-            peso: user.peso?.toString() || "1",
-            senhaAtual: "",
-            novaSenha: "",
-            confirmarSenha: "",
-          });
-        } catch (error) {
-          // Fallback para dados do token
-          setUserData({
-            id: payload.sub,
-            nome: payload.nome || payload.email?.split("@")[0] || "Usuário",
-            email: payload.email,
-            perfil: payload.perfil,
-            peso: 1,
-          });
-          setFormData({
-            nome: payload.nome || payload.email?.split("@")[0] || "",
-            email: payload.email || "",
-            peso: "1",
-            senhaAtual: "",
-            novaSenha: "",
-            confirmarSenha: "",
-          });
-        }
+      // Obter dados do token
+      const tokenData = getCurrentUserFromToken();
+      if (!tokenData) {
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
-    } catch (error: any) {
-      console.error("Erro ao carregar dados do usuário:", error);
-      toast.error("Erro ao carregar dados do usuário");
-    } finally {
-      setLoadingData(false);
-    }
-  };
 
-  const handleSavePeso = async () => {
-    if (!canEditAdvanced) {
-      toast.error("Você não tem permissão para alterar o peso");
-      return;
-    }
+      // Buscar dados completos do usuário
+      const [userResponse, setoresData] = await Promise.all([
+        api.get<Colaborador>(`/users/${tokenData.id}`),
+        getSectors(),
+      ]);
 
-    const peso = parseFloat(formData.peso);
-    if (isNaN(peso) || peso < 0 || peso > 1) {
-      toast.error("Peso deve ser um número entre 0 e 1");
-      return;
-    }
+      const user = userResponse.data;
+      setUserData(user);
+      setSetores(setoresData);
 
-    try {
-      setLoading(true);
-      await api.patch(`/users/${userData.id}/peso`, { peso });
-      toast.success("Peso atualizado com sucesso!");
-      loadUserData();
-    } catch (error: any) {
-      console.error("Erro ao atualizar peso:", error);
-      toast.error("Erro ao atualizar peso");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (!formData.senhaAtual.trim()) {
-      toast.error("Senha atual é obrigatória");
-      return;
-    }
-
-    if (!formData.novaSenha.trim()) {
-      toast.error("Nova senha é obrigatória");
-      return;
-    }
-
-    if (formData.novaSenha.length < 3) {
-      toast.error("Nova senha deve ter pelo menos 3 caracteres");
-      return;
-    }
-
-    if (formData.novaSenha !== formData.confirmarSenha) {
-      toast.error("As senhas não coincidem");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      toast.warning("Alteração de senha em desenvolvimento. Entre em contato com o administrador.");
-      
       setFormData({
-        ...formData,
-        senhaAtual: "",
-        novaSenha: "",
-        confirmarSenha: "",
+        nome: user.nome || "",
+        email: user.email || "",
+        senha: "",
+        confirmSenha: "",
+        setorId: user.setor?.id || user.setorId || 0,
       });
-    } catch (error: any) {
-      console.error("Erro ao alterar senha:", error);
-      toast.error("Erro ao alterar senha");
+    } catch (err: any) {
+      console.error("Erro ao carregar dados:", err);
+      setError("Erro ao carregar dados do usuário. Tente novamente.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    // Validações
+    if (!formData.nome.trim()) {
+      setError("Nome é obrigatório");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError("Email é obrigatório");
+      return;
+    }
+
+    if (formData.senha && formData.senha !== formData.confirmSenha) {
+      setError("As senhas não coincidem");
+      return;
+    }
+
+    if (formData.senha && formData.senha.length < 3) {
+      setError("A senha deve ter pelo menos 3 caracteres");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Montar payload apenas com campos alterados
+      const payload: any = {};
+
+      if (formData.nome !== userData?.nome) {
+        payload.nome = formData.nome;
+      }
+
+      if (formData.email !== userData?.email) {
+        payload.email = formData.email;
+      }
+
+      if (formData.senha) {
+        payload.senha = formData.senha;
+      }
+
+      const currentSetorId = userData?.setor?.id || userData?.setorId || 0;
+      if (formData.setorId !== currentSetorId && formData.setorId > 0) {
+        payload.setorId = formData.setorId;
+      }
+
+      // Verificar se há algo para atualizar
+      if (Object.keys(payload).length === 0) {
+        setError("Nenhuma alteração detectada");
+        return;
+      }
+
+      console.log("📤 Enviando atualização:", payload);
+
+      await updateMe(payload);
+
+      setSuccess("Perfil atualizado com sucesso!");
+      toast.success("Perfil atualizado com sucesso!");
+
+      // Limpar campos de senha
+      setFormData((prev) => ({
+        ...prev,
+        senha: "",
+        confirmSenha: "",
+      }));
+
+      // Recarregar dados
+      await loadUserData();
+    } catch (err: any) {
+      console.error("Erro ao atualizar perfil:", err);
+      const errorMsg =
+        err.response?.data?.message || "Erro ao atualizar perfil";
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getPerfilLabel = (perfil: string) => {
+    switch (perfil) {
+      case "ADMIN":
+        return "Administrador";
+      case "GESTOR":
+        return "Gestor";
+      case "COLABORADOR":
+        return "Colaborador";
+      default:
+        return perfil;
     }
   };
 
@@ -151,7 +193,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  if (loadingData) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50">
         <div className="flex flex-col items-center gap-4">
@@ -159,8 +201,10 @@ const Settings: React.FC = () => {
             <div className="w-16 h-16 border-4 border-gray-200 border-t-[#4c010c] rounded-full animate-spin"></div>
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando...</h2>
-            <p className="text-gray-500">Buscando suas configurações</p>
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              Carregando...
+            </h2>
+            <p className="text-gray-500">Buscando seus dados</p>
           </div>
         </div>
       </div>
@@ -169,181 +213,239 @@ const Settings: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Configurações</h1>
-          <p className="text-gray-600">Gerencie suas informações pessoais e preferências</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Configurações
+          </h1>
+          <p className="text-gray-600">Gerencie suas informações pessoais</p>
         </div>
 
-        <div className="space-y-6">
-          {/* Perfil Card */}
-          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#4c010c] to-red-900 flex items-center justify-center text-white font-bold text-3xl">
+        {/* Card do Perfil */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Header do Card */}
+          <div className="bg-gradient-to-r from-[#4c010c] to-red-900 p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-white text-3xl font-bold border-4 border-white/30">
                 {userData?.nome?.charAt(0).toUpperCase() || "U"}
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">{userData?.nome}</h2>
-                <p className="text-gray-600">{userData?.email}</p>
-                <span
-                  className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${getPerfilColor(
-                    userData?.perfil
-                  )}`}
-                >
-                  {userData?.perfil}
-                </span>
+              <div className="text-white">
+                <h2 className="text-2xl font-bold">{userData?.nome}</h2>
+                <p className="text-white/80">{userData?.email}</p>
+                <div className="mt-2">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border ${getPerfilColor(
+                      userData?.perfil || ""
+                    )}`}
+                  >
+                    <Shield className="w-3 h-3 inline mr-1" />
+                    {getPerfilLabel(userData?.perfil || "")}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Informações Pessoais */}
-          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <User className="w-6 h-6 text-[#4c010c]" />
-              <h3 className="text-xl font-bold text-gray-800">Informações Pessoais</h3>
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Mensagens de erro/sucesso */}
+            {error && (
+              <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800">
+                <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                <span>{success}</span>
+              </div>
+            )}
+
+            {/* Nome */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                <User className="w-4 h-4 text-[#4c010c]" />
+                Nome Completo
+              </label>
+              <input
+                type="text"
+                value={formData.nome}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
+                placeholder="Seu nome completo"
+              />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nome Completo
-                </label>
-                <input
-                  type="text"
-                  value={formData.nome}
-                  disabled
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                  placeholder="Seu nome completo"
-                />
-                <p className="mt-1 text-xs text-gray-500">Campo somente leitura</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    disabled
-                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                    placeholder="seu@email.com"
-                  />
-                </div>
-                <p className="mt-1 text-xs text-gray-500">Campo somente leitura</p>
-              </div>
-
-              {canEditAdvanced && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Peso <span className="text-gray-500 text-xs">(0 a 1)</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="1"
-                      value={formData.peso}
-                      onChange={(e) => setFormData({ ...formData, peso: e.target.value })}
-                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
-                      placeholder="1"
-                    />
-                    <button
-                      onClick={handleSavePeso}
-                      disabled={loading}
-                      className="px-6 py-3 bg-[#4c010c] text-white rounded-lg font-semibold hover:bg-[#3a0109] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <Save className="w-5 h-5" />
-                      Salvar
-                    </button>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Define a distribuição de atendimentos
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Segurança */}
-          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Lock className="w-6 h-6 text-[#4c010c]" />
-              <h3 className="text-xl font-bold text-gray-800">Segurança</h3>
+            {/* Email */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                <Mail className="w-4 h-4 text-[#4c010c]" />
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
+                placeholder="seu@email.com"
+              />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Senha Atual
-                </label>
-                <input
-                  type="password"
-                  value={formData.senhaAtual}
-                  onChange={(e) => setFormData({ ...formData, senhaAtual: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
-                  placeholder="Digite sua senha atual"
-                />
-              </div>
+            {/* Setor */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                <Building2 className="w-4 h-4 text-[#4c010c]" />
+                Setor
+              </label>
+              <select
+                value={formData.setorId}
+                onChange={(e) =>
+                  setFormData({ ...formData, setorId: Number(e.target.value) })
+                }
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all cursor-pointer"
+              >
+                <option value="0">Selecione um setor</option>
+                {setores.map((setor) => (
+                  <option key={setor.id} value={setor.id}>
+                    {setor.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {/* Divider */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-[#4c010c]" />
+                Alterar Senha
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Deixe em branco se não quiser alterar a senha
+              </p>
+
+              {/* Nova Senha */}
+              <div className="mb-4">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                   Nova Senha
                 </label>
-                <input
-                  type="password"
-                  value={formData.novaSenha}
-                  onChange={(e) => setFormData({ ...formData, novaSenha: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
-                  placeholder="Digite sua nova senha"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.senha}
+                    onChange={(e) =>
+                      setFormData({ ...formData, senha: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all pr-12"
+                    placeholder="Digite a nova senha"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
+              {/* Confirmar Senha */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                   Confirmar Nova Senha
                 </label>
-                <input
-                  type="password"
-                  value={formData.confirmarSenha}
-                  onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
-                  placeholder="Confirme sua nova senha"
-                />
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <button
-                  onClick={handleChangePassword}
-                  disabled={loading}
-                  className="px-6 py-3 bg-[#4c010c] text-white rounded-lg font-semibold hover:bg-[#3a0109] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <Shield className="w-5 h-5" />
-                  Alterar Senha
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Informações Adicionais */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-blue-900 mb-1">Nota Importante</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Nome e email não podem ser alterados aqui. Entre em contato com o administrador.</li>
-                  <li>• A alteração de senha está em desenvolvimento.</li>
-                  {canEditAdvanced && (
-                    <li>• Como {userData?.perfil}, você pode editar seu próprio peso de atendimentos.</li>
-                  )}
-                </ul>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmSenha}
+                    onChange={(e) =>
+                      setFormData({ ...formData, confirmSenha: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all pr-12"
+                    placeholder="Confirme a nova senha"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* Informações somente leitura */}
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-600 mb-3">
+                Informações do Sistema
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">ID do Usuário:</span>
+                  <span className="ml-2 font-medium text-gray-800">
+                    #{userData?.id}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Perfil:</span>
+                  <span className="ml-2 font-medium text-gray-800">
+                    {getPerfilLabel(userData?.perfil || "")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Peso:</span>
+                  <span className="ml-2 font-medium text-gray-800">
+                    {userData?.peso || 1}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Setor Atual:</span>
+                  <span className="ml-2 font-medium text-gray-800">
+                    {userData?.setor?.nome || "Não definido"}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                * O perfil e peso só podem ser alterados por um administrador
+              </p>
+            </div>
+
+            {/* Botão Salvar */}
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#4c010c] text-white rounded-xl hover:bg-[#3a0109] transition-all font-bold text-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

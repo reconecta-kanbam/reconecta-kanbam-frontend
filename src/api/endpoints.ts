@@ -18,7 +18,11 @@ const ENDPOINTS = {
   // USUÁRIOS
   LIST_USERS: "/users",
   CREATE_USER: "/users",
+  UPDATE_USER: (userId: number) => `/users/${userId}`,
   UPDATE_USER_WEIGHT: (userId: number) => `/users/${userId}/peso`,
+  UPDATE_ME: "/users/me", // NOVO: Endpoint para usuário editar próprio perfil
+  DELETE_USER: (userId: number) => `/users/${userId}`,
+  DELETE_USER_ACTION: (userId: number) => `/users/${userId}/delete-action`,
 
   // STATUS (Colunas do Kanban)
   LIST_STATUS: "/status",
@@ -26,11 +30,11 @@ const ENDPOINTS = {
   UPDATE_STATUS: (id: number) => `/status/${id}`,
   DELETE_STATUS: (id: number) => `/status/${id}`,
 
-  // SUBTAREFAS - 🔥 CORRIGIDO: Removido /users/ do path de edição
+  // SUBTAREFAS
   CREATE_SUBTAREFA: (ocorrenciaId: number) =>
     `/ocorrencias/${ocorrenciaId}/subtarefas`,
   EDIT_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
-    `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`, // ✅ Path correto
+    `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
   DELETE_SUBTAREFA: (ocorrenciaId: number, subId: number) =>
     `/ocorrencias/${ocorrenciaId}/subtarefas/${subId}`,
 

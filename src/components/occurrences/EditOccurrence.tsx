@@ -1,13 +1,29 @@
 import { useEffect, useState } from "react";
-import { createOcorrencia, editOcorrencia } from "../../api/services/ocorrencias";
+import {
+  createOcorrencia,
+  editOcorrencia,
+} from "../../api/services/ocorrencias";
 import { listStatus } from "../../api/services/status";
 import { listUsers } from "../../api/services/usuario";
 import { getSectors } from "../../api/services/sectors";
 import { listWorkflows } from "../../api/services/workflows";
-import type { Ocorrencia, CreateOcorrenciaRequest } from "../../api/types/ocorrencia";
+import type {
+  Ocorrencia,
+  CreateOcorrenciaRequest,
+} from "../../api/types/ocorrencia";
 import type { Setor } from "../../api/types/usuario";
 import { toast } from "sonner";
-import { Plus, FileText, Layers, Settings, User as UserIcon, X, Folder, Link, FileCheck, } from "lucide-react";
+import {
+  Plus,
+  FileText,
+  Layers,
+  Settings,
+  User as UserIcon,
+  X,
+  Folder,
+  Link,
+  FileCheck,
+} from "lucide-react";
 
 interface Status {
   id: number;
@@ -61,8 +77,8 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
     statusId: undefined,
     colaboradorId: undefined,
     workflowId: undefined,
-    documentacaoUrl: undefined,
-    descricaoExecucao: undefined,
+    documentacaoUrl: "",
+    descricaoExecucao: "",
   });
 
   // Carregar dados iniciais
@@ -75,15 +91,16 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
   // Preencher formulário ao editar
   useEffect(() => {
     if (ocorrencia) {
+      console.log("📋 Carregando dados da ocorrência para edição:", ocorrencia);
       setForm({
         titulo: ocorrencia.titulo,
         descricao: ocorrencia.descricao,
         setorId: ocorrencia.setor?.id || 0,
         statusId: ocorrencia.status?.id,
         colaboradorId: ocorrencia.colaborador?.id,
-        workflowId: ocorrencia.workflowId,
-        documentacaoUrl: ocorrencia.documentacaoUrl || undefined,
-        descricaoExecucao: ocorrencia.descricaoExecucao || undefined,
+        workflowId: ocorrencia.workflowId || ocorrencia.workflow?.id,
+        documentacaoUrl: ocorrencia.documentacaoUrl || "",
+        descricaoExecucao: ocorrencia.descricaoExecucao || "",
       });
     } else {
       resetForm();
@@ -92,12 +109,13 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
 
   const loadInitialData = async () => {
     try {
-      const [setoresData, statusData, usuariosData, workflowsData] = await Promise.all([
-        getSectors(),
-        listStatus(),
-        listUsers(),
-        listWorkflows(),
-      ]);
+      const [setoresData, statusData, usuariosData, workflowsData] =
+        await Promise.all([
+          getSectors(),
+          listStatus(),
+          listUsers(),
+          listWorkflows().catch(() => []), // Workflows pode dar 403 para alguns perfis
+        ]);
 
       setSetores(setoresData);
       setStatusList(statusData);
@@ -122,8 +140,8 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
       statusId: undefined,
       colaboradorId: undefined,
       workflowId: undefined,
-      documentacaoUrl: undefined,
-      descricaoExecucao: undefined,
+      documentacaoUrl: "",
+      descricaoExecucao: "",
     });
   };
 
@@ -139,19 +157,52 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
       setLoading(true);
 
       if (isEditing && ocorrencia) {
-        await editOcorrencia(ocorrencia.id, form);
+        // ==================== EDITAR ====================
+        // CORREÇÃO: Enviar TODOS os campos, incluindo opcionais
+        const editPayload = {
+          titulo: form.titulo,
+          descricao: form.descricao,
+          setorId: form.setorId,
+          statusId: form.statusId,
+          // Campos opcionais - sempre enviar (string vazia = limpar campo)
+          documentacaoUrl: form.documentacaoUrl ?? "",
+          descricaoExecucao: form.descricaoExecucao ?? "",
+          workflowId: form.workflowId || null,
+        };
+
+        console.log("📤 Payload de edição COMPLETO:", editPayload);
+        
+        await editOcorrencia(ocorrencia.id, editPayload);
         toast.success("Ocorrência atualizada com sucesso!");
       } else {
-        await createOcorrencia(form);
+        // ==================== CRIAR ====================
+        const createPayload: CreateOcorrenciaRequest = {
+          titulo: form.titulo,
+          descricao: form.descricao,
+          setorId: form.setorId,
+          colaboradorId: form.colaboradorId,
+          statusId: form.statusId,
+          workflowId: form.workflowId || undefined,
+          // Campos opcionais - sempre enviar
+          documentacaoUrl: form.documentacaoUrl ?? "",
+          descricaoExecucao: form.descricaoExecucao ?? "",
+        };
+
+        console.log("📤 Payload de criação COMPLETO:", createPayload);
+        
+        await createOcorrencia(createPayload);
         toast.success("Ocorrência criada com sucesso!");
       }
 
       onSuccess();
       onOpenChange(false);
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar ocorrência:", error);
-      toast.error(`Erro ao ${isEditing ? "atualizar" : "criar"} ocorrência`);
+      const errorMsg =
+        error.response?.data?.message ||
+        `Erro ao ${isEditing ? "atualizar" : "criar"} ocorrência`;
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -223,7 +274,9 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
                 rows={4}
                 placeholder="Descreva a ocorrência em detalhes..."
                 value={form.descricao}
-                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, descricao: e.target.value })
+                }
                 required
                 disabled={loading}
               />
@@ -243,11 +296,14 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    documentacaoUrl: e.target.value || undefined,
+                    documentacaoUrl: e.target.value,
                   })
                 }
                 disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Link para documentação externa relacionada
+              </p>
             </div>
 
             {/* Descrição de Execução */}
@@ -264,11 +320,14 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    descricaoExecucao: e.target.value || undefined,
+                    descricaoExecucao: e.target.value,
                   })
                 }
                 disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Instruções rápidas de execução ou resolução
+              </p>
             </div>
 
             {/* Setor */}
@@ -279,7 +338,9 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
               </label>
               <select
                 value={form.setorId}
-                onChange={(e) => setForm({ ...form, setorId: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, setorId: Number(e.target.value) })
+                }
                 className="w-full border-2 border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all cursor-pointer"
                 required
                 disabled={loading}
@@ -304,7 +365,9 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    statusId: e.target.value ? Number(e.target.value) : undefined,
+                    statusId: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
                 className="w-full border-2 border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all cursor-pointer"
@@ -330,7 +393,9 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    colaboradorId: e.target.value ? Number(e.target.value) : undefined,
+                    colaboradorId: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
                 className="w-full border-2 border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all cursor-pointer"
@@ -356,7 +421,9 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    workflowId: e.target.value ? Number(e.target.value) : undefined,
+                    workflowId: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
                 className="w-full border-2 border-gray-200 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all cursor-pointer"

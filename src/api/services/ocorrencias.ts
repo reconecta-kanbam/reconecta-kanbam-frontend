@@ -6,28 +6,61 @@ import {
   Subtarefa,
 } from "../types/ocorrencia";
 
-// 🟢 Criar nova ocorrência
+// Criar nova ocorrência
 export const createOcorrencia = async (data: CreateOcorrenciaRequest) => {
   console.log("📤 Criando ocorrência:", data);
-  const response = await api.post(ENDPOINTS.CREATE_OCORRENCIA, data);
+
+  // Montar payload garantindo que os campos opcionais sejam enviados
+  const payload: any = {
+    titulo: data.titulo,
+    descricao: data.descricao,
+    setorId: data.setorId,
+  };
+
+  // Adicionar campos opcionais apenas se tiverem valor
+  if (data.colaboradorId) payload.colaboradorId = data.colaboradorId;
+  if (data.statusId) payload.statusId = data.statusId;
+  if (data.workflowId) payload.workflowId = data.workflowId;
+  
+  // CORREÇÃO: Sempre enviar esses campos (mesmo vazios) para garantir persistência
+  payload.documentacaoUrl = data.documentacaoUrl || "";
+  payload.descricaoExecucao = data.descricaoExecucao || "";
+
+  console.log("📦 Payload final:", payload);
+
+  const response = await api.post(ENDPOINTS.CREATE_OCORRENCIA, payload);
   console.log("✅ Ocorrência criada:", response.data);
   return response.data as Ocorrencia;
 };
 
-// 🟢 Criar ocorrência pública
+// Criar ocorrência pública
 export const createOcorrenciaPublic = async (data: {
   titulo: string;
   descricao: string;
   colaboradorNome: string;
   setorId: number;
+  documentacaoUrl?: string;
+  descricaoExecucao?: string;
 }) => {
   console.log("📤 Criando ocorrência pública:", data);
-  const response = await api.post(ENDPOINTS.CREATE_OCORRENCIA_PUBLIC, data);
+
+  const payload: any = {
+    titulo: data.titulo,
+    descricao: data.descricao,
+    colaboradorNome: data.colaboradorNome,
+    setorId: data.setorId,
+  };
+
+  // CORREÇÃO: Sempre enviar esses campos
+  payload.documentacaoUrl = data.documentacaoUrl || "";
+  payload.descricaoExecucao = data.descricaoExecucao || "";
+
+  const response = await api.post(ENDPOINTS.CREATE_OCORRENCIA_PUBLIC, payload);
   console.log("✅ Ocorrência pública criada:", response.data);
   return response.data as Ocorrencia;
 };
 
-// 🟡 Listar ocorrências (com filtros avançados)
+// Listar ocorrências (com filtros avançados)
 export const listOcorrencias = async (filters?: {
   titulo?: string;
   setorId?: number;
@@ -55,7 +88,7 @@ export const listOcorrencias = async (filters?: {
   return response.data as Ocorrencia[];
 };
 
-// 🟣 Listar por usuário
+// Listar por usuário
 export const listOcorrenciasByUser = async (userId: number) => {
   console.log(`📥 Buscando ocorrências do usuário ${userId}`);
   const response = await api.get(ENDPOINTS.GET_OCORRENCIA_BY_USER(userId));
@@ -63,44 +96,53 @@ export const listOcorrenciasByUser = async (userId: number) => {
   return response.data as Ocorrencia[];
 };
 
-// 🔴 Deletar
+// Deletar
 export const deleteOcorrencia = async (id: number) => {
   console.log("🗑️ Deletando ocorrência ID:", id);
   await api.delete(ENDPOINTS.DELETE_OCORRENCIA(id));
   console.log("✅ Ocorrência deletada");
 };
 
-// ✏️ Editar ocorrência
+// Editar ocorrência
 export const editOcorrencia = async (
   id: number,
   data: {
-    titulo: string;
-    descricao: string;
-    setorId: number;
+    titulo?: string;
+    descricao?: string;
+    setorId?: number;
     statusId?: number;
+    documentacaoUrl?: string;
+    descricaoExecucao?: string;
   }
 ) => {
   console.log(`✏️ Editando ocorrência ID ${id}`, data);
-  const response = await api.patch(ENDPOINTS.EDIT_OCORRENCIA(id), data);
+
+  // Montar payload
+  const payload: any = {};
+  if (data.titulo !== undefined) payload.titulo = data.titulo;
+  if (data.descricao !== undefined) payload.descricao = data.descricao;
+  if (data.setorId !== undefined) payload.setorId = data.setorId;
+  
+  // CORREÇÃO: Sempre enviar esses campos para garantir que sejam atualizados
+  // Usa ?? para incluir string vazia, diferente de || que ignoraria ""
+  payload.documentacaoUrl = data.documentacaoUrl ?? "";
+  payload.descricaoExecucao = data.descricaoExecucao ?? "";
+
+  console.log("📦 Payload de edição:", payload);
+
+  const response = await api.patch(ENDPOINTS.EDIT_OCORRENCIA(id), payload);
   console.log("✅ Ocorrência atualizada:", response.data);
 
-  if (data.statusId) {
-    const statusAntes = data.statusId;
-    const statusDepois = response.data.status?.id;
-    console.log(
-      `🔍 Status solicitado: ${statusAntes}, Status retornado: ${statusDepois}`
-    );
-
-    if (statusAntes !== statusDepois) {
-      console.warn("⚠️ ATENÇÃO: Status não foi atualizado pelo backend!");
-    } else {
-      console.log("✅ Status atualizado corretamente!");
-    }
+  // Se statusId foi passado, atualizar status separadamente
+  if (data.statusId !== undefined) {
+    console.log(`🔄 Atualizando status para ${data.statusId}`);
+    await updateStatusOcorrencia(id, { statusId: data.statusId });
   }
+
   return response.data as Ocorrencia;
 };
 
-// 🧩 Subtarefas
+// Subtarefas
 export const createSubtarefa = async (
   ocorrenciaId: number,
   data: { titulo: string; descricao?: string; responsavelId?: number }
@@ -134,7 +176,7 @@ export const deleteSubtarefa = async (ocorrenciaId: number, subId: number) => {
   console.log("✅ Subtarefa deletada");
 };
 
-// 👤 Atribuir ocorrência a um colaborador
+// Atribuir ocorrência a um colaborador
 export const assignOcorrencia = async (
   id: number,
   data: { colaboradorId: number }
@@ -147,7 +189,7 @@ export const assignOcorrencia = async (
   return response.data as Ocorrencia;
 };
 
-// 🤖 Auto-atribuir ocorrência
+// Auto-atribuir ocorrência
 export const autoAssignOcorrencia = async (id: number) => {
   console.log(`🤖 Auto-atribuindo ocorrência ${id}`);
 
@@ -190,14 +232,14 @@ export const autoAssignOcorrencia = async (id: number) => {
   }
 };
 
-// 🔄 Atualizar status via Drag & Drop (VERSÃO CORRIGIDA COM MÚLTIPLAS TENTATIVAS)
+// Atualizar status via Drag & Drop
 export const updateStatusViaDrag = async (
   ocorrenciaId: number,
   statusId: number,
   statusChave?: string
 ): Promise<Ocorrencia> => {
   const endpoint = ENDPOINTS.UPDATE_STATUS_OCORRENCIA(ocorrenciaId);
-  
+
   console.log("═══════════════════════════════════════════════════");
   console.log(`🎯 DRAG & DROP: Atualizando Ocorrência #${ocorrenciaId}`);
   console.log(`📍 Endpoint: ${endpoint}`);
@@ -205,59 +247,51 @@ export const updateStatusViaDrag = async (
   console.log(`🔑 Status Chave: ${statusChave || "não fornecida"}`);
   console.log("═══════════════════════════════════════════════════");
 
-  // PRIORIDADE: Enviar a CHAVE do status (baseado no Postman)
   const payloads = [
-    // Formato 1: status como chave string (O QUE FUNCIONA NO POSTMAN)
     ...(statusChave ? [{ status: statusChave }] : []),
-    
-    // Formato 2: statusId numérico
     { statusId: statusId },
-    
-    // Formato 3: statusChave como campo
     ...(statusChave ? [{ statusChave: statusChave }] : []),
-    
-    // Formato 4: objeto status com id
     { status: { id: statusId } },
-    
-    // Formato 5: snake_case
     { status_id: statusId },
   ];
 
   let lastError: any = null;
 
-  // Tentar cada formato de payload
   for (let i = 0; i < payloads.length; i++) {
     const payload = payloads[i];
-    
+
     console.log(`\n🔄 Tentativa ${i + 1}/${payloads.length}`);
     console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
 
     try {
       const response = await api.patch(endpoint, payload);
-      
+
       console.log("\n✅ SUCESSO! Status atualizado");
       console.log("📥 Resposta do backend:", response.data);
-      
-      // Validar se o status foi realmente atualizado
+
       if (response.data.status?.id === statusId) {
         console.log("✅ Status confirmado no retorno!");
       } else {
         console.warn("⚠️ Status retornado diferente do esperado");
-        console.warn(`   Esperado: ${statusId}, Recebido: ${response.data.status?.id}`);
+        console.warn(
+          `   Esperado: ${statusId}, Recebido: ${response.data.status?.id}`
+        );
       }
-      
-      console.log("═══════════════════════════════════════════════════\n");
+
+      console.log(
+        "═══════════════════════════════════════════════════\n"
+      );
       return response.data as Ocorrencia;
-      
     } catch (error: any) {
       lastError = error;
-      
+
       console.error(`❌ Tentativa ${i + 1} falhou`);
       console.error(`   Status HTTP: ${error.response?.status}`);
-      console.error(`   Mensagem: ${error.response?.data?.message || error.message}`);
+      console.error(
+        `   Mensagem: ${error.response?.data?.message || error.message}`
+      );
       console.error(`   Dados completos:`, error.response?.data);
-      
-      // Se não é a última tentativa, continua
+
       if (i < payloads.length - 1) {
         console.log("   → Tentando próximo formato...");
         continue;
@@ -265,31 +299,36 @@ export const updateStatusViaDrag = async (
     }
   }
 
-  // Se chegou aqui, todas as tentativas falharam
   console.error("\n❌ TODAS AS TENTATIVAS FALHARAM");
   console.error("═══════════════════════════════════════════════════");
   console.error("📍 Endpoint testado:", endpoint);
   console.error("📦 Payloads testados:", JSON.stringify(payloads, null, 2));
-  console.error("❌ Último erro:", lastError?.response?.data || lastError?.message);
+  console.error(
+    "❌ Último erro:",
+    lastError?.response?.data || lastError?.message
+  );
   console.error("═══════════════════════════════════════════════════\n");
 
   throw new Error(
     `Erro ao atualizar status: ${
-      lastError?.response?.data?.message || lastError?.message || "Erro desconhecido"
+      lastError?.response?.data?.message ||
+      lastError?.message ||
+      "Erro desconhecido"
     }`
   );
 };
 
-// 🔄 Atualizar status da ocorrência (VERSÃO MELHORADA)
+// Atualizar status da ocorrência
 export const updateStatusOcorrencia = async (
   id: number,
   data: { statusId: number }
 ) => {
   const endpoint = ENDPOINTS.UPDATE_STATUS_OCORRENCIA(id);
-  console.log(`🔄 Atualizando status da ocorrência ${id} para status ${data.statusId}`);
+  console.log(
+    `🔄 Atualizando status da ocorrência ${id} para status ${data.statusId}`
+  );
   console.log(`📍 Endpoint: ${endpoint}`);
 
-  // Mapeamento de ID para chave de status
   const statusChaveMap: Record<number, string> = {
     1: "em_atribuicao",
     2: "em_fila",
@@ -302,18 +341,10 @@ export const updateStatusOcorrencia = async (
 
   const statusChave = statusChaveMap[data.statusId];
 
-  // Lista de payloads para tentar em ordem de prioridade
   const payloads = [
-    // Formato 1: Chave de status (compatível com backend NestJS que espera enum string)
     ...(statusChave ? [{ status: statusChave }] : []),
-    
-    // Formato 2: ID numérico (se o backend aceitar)
     { statusId: data.statusId },
-    
-    // Formato 3: Objeto status com id
     { status: { id: data.statusId } },
-    
-    // Formato 4: snake_case
     { status_id: data.statusId },
   ];
 
@@ -324,15 +355,16 @@ export const updateStatusOcorrencia = async (
     try {
       const response = await api.patch(endpoint, payload);
       console.log("✅ Status da ocorrência atualizado:", response.data);
-      
-      // Validar se o status foi realmente atualizado
+
       if (response.data.status?.id === data.statusId) {
         console.log("✅ Status confirmado no retorno!");
       } else {
         console.warn("⚠️ Status retornado diferente do esperado");
-        console.warn(`   Esperado: ${data.statusId}, Recebido: ${response.data.status?.id}`);
+        console.warn(
+          `   Esperado: ${data.statusId}, Recebido: ${response.data.status?.id}`
+        );
       }
-      
+
       return response.data as Ocorrencia;
     } catch (error: any) {
       console.error(
@@ -351,7 +383,6 @@ export const updateStatusOcorrencia = async (
       throw error;
     }
   }
-  
-  // Fallback - não deve chegar aqui
+
   throw new Error("Erro ao atualizar status da ocorrência");
 };
