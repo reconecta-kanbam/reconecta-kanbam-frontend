@@ -1,20 +1,15 @@
+// src/api/types/audit.ts
+
 export interface AuditLog {
   id: number;
-  actorId: number | null;
   action: string;
   targetType: string;
   targetId: number;
+  actorId: number | null;
+  metadata?: Record<string, any>;
   createdAt: string;
 }
 
-export interface AuditLogsResponse {
-  items: AuditLog[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// Tipos enriquecidos (frontend only)
 export interface EnrichedAuditLog extends AuditLog {
   actor?: {
     id: number;
@@ -25,6 +20,24 @@ export interface EnrichedAuditLog extends AuditLog {
       id: number;
       nome: string;
     };
-  } | null;
-  targetDetails?: any;
+  };
+  targetDetails?: {
+    titulo?: string;
+    nome?: string;
+    email?: string;
+    perfil?: string;
+    chave?: string;
+    colaborador_nome?: string;
+    responsavel_nome?: string;
+    setor_nome?: string;
+    ocorrencia_titulo?: string;
+  };
+}
+
+export interface AuditLogResponse {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

@@ -18,6 +18,7 @@
 /*=============== Pages ===============*/
 @import "./pages/kanbanBoard";
 @import "./pages/authPages";
+@import "./pages/log.css";
 
 /*=============== Import Boxicons ===============*/
 @import url('https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css');

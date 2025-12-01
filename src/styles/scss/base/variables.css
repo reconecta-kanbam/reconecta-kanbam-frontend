@@ -28,6 +28,31 @@
 
 --shadow: rgba(10, 22, 50, 0.24);
 
+/*========== Badge Colors (Actions) ==========*/
+--badge-create-bg: rgba(220, 252, 231, 1);
+--badge-create-text: rgba(22, 101, 52, 1);
+--badge-create-border: rgba(134, 239, 172, 1);
+
+--badge-update-bg: rgba(219, 234, 254, 1);
+--badge-update-text: rgba(30, 64, 175, 1);
+--badge-update-border: rgba(147, 197, 253, 1);
+
+--badge-delete-bg: rgba(254, 226, 226, 1);
+--badge-delete-text: rgba(153, 27, 27, 1);
+--badge-delete-border: rgba(252, 165, 165, 1);
+
+--badge-transfer-bg: rgba(243, 232, 255, 1);
+--badge-transfer-text: rgba(107, 33, 168, 1);
+--badge-transfer-border: rgba(216, 180, 254, 1);
+
+--badge-nullify-bg: rgba(255, 237, 213, 1);
+--badge-nullify-text: rgba(154, 52, 18, 1);
+--badge-nullify-border: rgba(253, 186, 116, 1);
+
+--badge-default-bg: var(--gray-100);
+--badge-default-text: var(--gray-700);
+--badge-default-border: var(--gray-300);
+
 /*========== Fonte e tipografia  ==========*/
 --body-font: "Raleway", sans-serif;
 

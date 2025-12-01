@@ -4,11 +4,11 @@ import { listUsers } from "../../api/services/usuario";
 import { listOcorrencias } from "../../api/services/ocorrencias";
 import { listStatus } from "../../api/services/status";
 import { listWorkflows } from "../../api/services/workflows";
-import { getSectors } from "../../api/services/sectors";
+import { listSetores } from "../../api/services/sectors";
 import type { AuditLog, EnrichedAuditLog } from "../../api/types/audit";
 import type { Ocorrencia } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
-import { Search, Calendar, User, FileText, ChevronLeft, ChevronRight, Briefcase, Hash } from "lucide-react";
+import { Search, Calendar, User, FileText, ChevronLeft, ChevronRight, Briefcase, Hash, } from "lucide-react";
 
 const Logs: React.FC = () => {
   const [logs, setLogs] = useState<EnrichedAuditLog[]>([]);
@@ -39,7 +39,7 @@ const Logs: React.FC = () => {
         listUsers().catch(() => []),
         listOcorrencias().catch(() => []),
         listStatus().catch(() => []),
-        getSectors().catch(() => []),
+        listSetores().catch(() => []),
         listWorkflows().catch(() => []),
       ]);
 
@@ -76,7 +76,7 @@ const Logs: React.FC = () => {
 
         // Adicionar detalhes do target
         switch (log.targetType) {
-          case 'ocorrencia':
+          case "ocorrencia":
             const ocorrencia = newOcorrenciasCache.get(log.targetId);
             if (ocorrencia) {
               enriched.targetDetails = {
@@ -87,7 +87,7 @@ const Logs: React.FC = () => {
             }
             break;
 
-          case 'user':
+          case "user":
             const targetUser = newUsersCache.get(log.targetId);
             if (targetUser) {
               enriched.targetDetails = {
@@ -98,8 +98,7 @@ const Logs: React.FC = () => {
             }
             break;
 
-          case 'subtarefa':
-            // Buscar nas ocorrências a subtarefa
+          case "subtarefa":
             for (const occ of ocorrencias) {
               const subtarefa = occ.subtarefas?.find((s: any) => s.id === log.targetId);
               if (subtarefa) {
@@ -113,7 +112,7 @@ const Logs: React.FC = () => {
             }
             break;
 
-          case 'setor':
+          case "setor":
             const setor = newSetoresCache.get(log.targetId);
             if (setor) {
               enriched.targetDetails = {
@@ -122,7 +121,7 @@ const Logs: React.FC = () => {
             }
             break;
 
-          case 'status':
+          case "status":
             const statusItem = newStatusCache.get(log.targetId);
             if (statusItem) {
               enriched.targetDetails = {
@@ -132,7 +131,7 @@ const Logs: React.FC = () => {
             }
             break;
 
-          case 'workflow':
+          case "workflow":
             const workflow = newWorkflowsCache.get(log.targetId);
             if (workflow) {
               enriched.targetDetails = {
@@ -141,8 +140,7 @@ const Logs: React.FC = () => {
             }
             break;
 
-          case 'historico_status':
-            // Buscar nas ocorrências o histórico
+          case "historico_status":
             for (const occ of ocorrencias) {
               const historico = occ.historicos?.find((h: any) => h.id === log.targetId);
               if (historico) {
@@ -161,7 +159,6 @@ const Logs: React.FC = () => {
       setLogs(enrichedLogs);
       setTotal(logsResponse.total);
     } catch (error) {
-      console.error("Erro ao carregar logs:", error);
       toast.error("Erro ao carregar logs de auditoria");
     } finally {
       setLoading(false);
@@ -211,12 +208,12 @@ const Logs: React.FC = () => {
   };
 
   const getActionColor = (action: string): string => {
-    if (action.includes("create")) return "bg-green-100 text-green-800 border-green-300";
-    if (action.includes("update")) return "bg-blue-100 text-blue-800 border-blue-300";
-    if (action.includes("delete")) return "bg-red-100 text-red-800 border-red-300";
-    if (action.includes("transfer")) return "bg-purple-100 text-purple-800 border-purple-300";
-    if (action.includes("nullify")) return "bg-orange-100 text-orange-800 border-orange-300";
-    return "bg-gray-100 text-gray-800 border-gray-300";
+    if (action.includes("create")) return "badge-create";
+    if (action.includes("update")) return "badge-update";
+    if (action.includes("delete")) return "badge-delete";
+    if (action.includes("transfer")) return "badge-transfer";
+    if (action.includes("nullify")) return "badge-nullify";
+    return "badge-default";
   };
 
   const getTargetTypeLabel = (targetType: string): string => {
@@ -240,31 +237,31 @@ const Logs: React.FC = () => {
     const details = log.targetDetails;
 
     switch (log.targetType) {
-      case 'ocorrencia':
+      case "ocorrencia":
         return details.titulo || `#${log.targetId}`;
-      
-      case 'user':
+
+      case "user":
         return details.nome || details.email || `#${log.targetId}`;
-      
-      case 'subtarefa':
-        return details.titulo 
-          ? `${details.titulo}${details.ocorrencia_titulo ? ` (${details.ocorrencia_titulo})` : ''}`
+
+      case "subtarefa":
+        return details.titulo
+          ? `${details.titulo}${details.ocorrencia_titulo ? ` (${details.ocorrencia_titulo})` : ""}`
           : `#${log.targetId}`;
-      
-      case 'setor':
+
+      case "setor":
         return details.nome || `#${log.targetId}`;
-      
-      case 'status':
+
+      case "status":
         return details.nome || details.chave || `#${log.targetId}`;
-      
-      case 'workflow':
+
+      case "workflow":
         return details.nome || `#${log.targetId}`;
-      
-      case 'historico_status':
-        return details.ocorrencia_titulo 
+
+      case "historico_status":
+        return details.ocorrencia_titulo
           ? `Histórico de "${details.ocorrencia_titulo}"`
           : `#${log.targetId}`;
-      
+
       default:
         return `#${log.targetId}`;
     }
@@ -275,18 +272,18 @@ const Logs: React.FC = () => {
       return {
         name: "Sistema",
         subtitle: "Ação automática",
-        icon: <Briefcase className="w-4 h-4 text-gray-400" />
+        icon: <Briefcase className="w-4 h-4 text-gray-400" />,
       };
     }
 
     return {
       name: log.actor.nome,
       subtitle: log.actor.setor?.nome || log.actor.perfil,
-      icon: <User className="w-4 h-4 text-gray-400" />
+      icon: <User className="w-4 h-4 text-gray-400" />,
     };
   };
 
-  // Mover filteredLogs para depois das funções usando useMemo
+  // Filtrar logs
   const filteredLogs = useMemo(() => {
     return logs.filter(
       (log) =>
@@ -324,13 +321,13 @@ const Logs: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Logs de Auditoria</h1>
-          <p className="text-gray-600">
-            Acompanhe todas as ações realizadas no sistema
-          </p>
+          <p className="text-gray-600">Acompanhe todas as ações realizadas no sistema</p>
         </div>
 
+        {/* Search */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -344,13 +341,12 @@ const Logs: React.FC = () => {
           </div>
         </div>
 
+        {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 overflow-hidden">
           {filteredLogs.length === 0 ? (
             <div className="text-center py-16">
               <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg font-medium">
-                Nenhum log encontrado
-              </p>
+              <p className="text-gray-600 text-lg font-medium">Nenhum log encontrado</p>
             </div>
           ) : (
             <>
@@ -382,10 +378,7 @@ const Logs: React.FC = () => {
                     {filteredLogs.map((log) => {
                       const userDisplay = getUserDisplay(log);
                       return (
-                        <tr
-                          key={log.id}
-                          className="hover:bg-gray-50 transition-colors"
-                        >
+                        <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <Hash className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -395,11 +388,7 @@ const Logs: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getActionColor(
-                                log.action
-                              )}`}
-                            >
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getActionColor(log.action)}`}>
                               {getActionLabel(log.action)}
                             </span>
                           </td>
@@ -456,11 +445,12 @@ const Logs: React.FC = () => {
                 </table>
               </div>
 
+              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
                   <div className="text-sm text-gray-600">
-                    Mostrando {(page - 1) * limit + 1} a{" "}
-                    {Math.min(page * limit, total)} de {total} registros
+                    Mostrando {(page - 1) * limit + 1} a {Math.min(page * limit, total)} de{" "}
+                    {total} registros
                   </div>
                   <div className="flex items-center gap-2">
                     <button

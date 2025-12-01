@@ -1,0 +1,36 @@
+/*========== Badge Classes ==========*/
+.badge-create {
+  background-color: var(--badge-create-bg);
+  color: var(--badge-create-text);
+  border-color: var(--badge-create-border);
+}
+
+.badge-update {
+  background-color: var(--badge-update-bg);
+  color: var(--badge-update-text);
+  border-color: var(--badge-update-border);
+}
+
+.badge-delete {
+  background-color: var(--badge-delete-bg);
+  color: var(--badge-delete-text);
+  border-color: var(--badge-delete-border);
+}
+
+.badge-transfer {
+  background-color: var(--badge-transfer-bg);
+  color: var(--badge-transfer-text);
+  border-color: var(--badge-transfer-border);
+}
+
+.badge-nullify {
+  background-color: var(--badge-nullify-bg);
+  color: var(--badge-nullify-text);
+  border-color: var(--badge-nullify-border);
+}
+
+.badge-default {
+  background-color: var(--badge-default-bg);
+  color: var(--badge-default-text);
+  border-color: var(--badge-default-border);
+}
