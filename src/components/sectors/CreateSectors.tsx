@@ -1,30 +1,21 @@
-import { useState, useEffect } from "react";
-import { X, Building, Save } from "lucide-react";
+import { useState } from "react";
+import { X, Building, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { updateSetor } from "../../api/services/sectors";
-import type { Setor } from "../../api/types/sectors";
+import { createSetor } from "../../api/services/sectors";
 
-interface EditarSetorProps {
+interface CriarSetorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  setor: Setor;
   onSuccess: () => void;
 }
 
-const EditarSetor: React.FC<EditarSetorProps> = ({
+const CriarSetor: React.FC<CriarSetorProps> = ({
   open,
   onOpenChange,
-  setor,
   onSuccess,
 }) => {
   const [nome, setNome] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (setor && open) {
-      setNome(setor.nome);
-    }
-  }, [setor, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,13 +27,13 @@ const EditarSetor: React.FC<EditarSetorProps> = ({
 
     try {
       setLoading(true);
-      await updateSetor(setor.id, { nome: nome.trim() });
-      toast.success("Setor atualizado com sucesso!");
+      await createSetor({ nome: nome.trim() });
+      toast.success("Setor criado com sucesso!");
       onSuccess();
       handleClose();
     } catch (error: any) {
-      console.error("Erro ao atualizar setor:", error);
-      toast.error(error.response?.data?.message || "Erro ao atualizar setor");
+      console.error("Erro ao criar setor:", error);
+      toast.error(error.response?.data?.message || "Erro ao criar setor");
     } finally {
       setLoading(false);
     }
@@ -69,7 +60,7 @@ const EditarSetor: React.FC<EditarSetorProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Building className="w-6 h-6 text-[#4c010c]" />
-            Editar Setor
+            Novo Setor
           </h2>
           <button
             onClick={handleClose}
@@ -97,11 +88,6 @@ const EditarSetor: React.FC<EditarSetorProps> = ({
                 autoFocus
               />
             </div>
-
-            {/* Info do setor */}
-            <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-              ID: #{setor.id}
-            </div>
           </div>
 
           {/* Buttons */}
@@ -122,12 +108,12 @@ const EditarSetor: React.FC<EditarSetorProps> = ({
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Salvando...
+                  Criando...
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
-                  Salvar
+                  <Plus className="w-4 h-4" />
+                  Criar Setor
                 </>
               )}
             </button>
@@ -138,4 +124,4 @@ const EditarSetor: React.FC<EditarSetorProps> = ({
   );
 };
 
-export default EditarSetor;
+export default CriarSetor;

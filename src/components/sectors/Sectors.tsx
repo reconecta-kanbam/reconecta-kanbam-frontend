@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
-import { getSectors } from "../../api/services/sectors";
+import { listSetores, deleteSetor } from "../../api/services/sectors";
+import type { Setor } from "../../api/types/sectors";
 import { toast } from "sonner";
-import { Plus, Search, Edit2, Building, Users } from "lucide-react";
-import EditSetor from "./EditSectors";
-
-interface Setor {
-  id: number;
-  nome: string;
-}
+import { Plus, Search, Edit2, Trash2, Building, Users } from "lucide-react";
+import CriarSetor from "./CreateSectors";
+import EditarSetor from "./EditSectors";
+import ConfirmDialog from "../ui/ConfirmDialog";
 
 const Setores: React.FC = () => {
   const [setores, setSetores] = useState<Setor[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Modal states
+  const [isCriarOpen, setIsCriarOpen] = useState(false);
+  const [isEditarOpen, setIsEditarOpen] = useState(false);
   const [setorToEdit, setSetorToEdit] = useState<Setor | null>(null);
+
+  // Delete confirmation state
+  const [confirmDelete, setConfirmDelete] = useState<{
+    open: boolean;
+    setor: Setor | null;
+  }>({ open: false, setor: null });
 
   useEffect(() => {
     loadSetores();
@@ -23,7 +30,7 @@ const Setores: React.FC = () => {
   const loadSetores = async () => {
     try {
       setLoading(true);
-      const data = await getSectors();
+      const data = await listSetores();
       setSetores(data);
     } catch (error) {
       console.error("Erro ao carregar setores:", error);
@@ -33,14 +40,35 @@ const Setores: React.FC = () => {
     }
   };
 
-  const handleOpenCreateModal = () => {
-    setSetorToEdit(null);
-    setIsModalOpen(true);
+  const handleOpenCriar = () => {
+    setIsCriarOpen(true);
   };
 
-  const handleOpenEditModal = (setor: Setor) => {
+  const handleOpenEditar = (setor: Setor) => {
     setSetorToEdit(setor);
-    setIsModalOpen(true);
+    setIsEditarOpen(true);
+  };
+
+  const handleCloseEditar = (open: boolean) => {
+    setIsEditarOpen(open);
+    if (!open) {
+      setSetorToEdit(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete.setor) return;
+
+    try {
+      await deleteSetor(confirmDelete.setor.id);
+      setSetores((prev) => prev.filter((s) => s.id !== confirmDelete.setor!.id));
+      toast.success("Setor deletado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao deletar setor:", error);
+      toast.error(error.response?.data?.message || "Erro ao deletar setor");
+    } finally {
+      setConfirmDelete({ open: false, setor: null });
+    }
   };
 
   const handleSuccess = () => {
@@ -63,7 +91,9 @@ const Setores: React.FC = () => {
             ></div>
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">Carregando...</h2>
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              Carregando...
+            </h2>
             <p className="text-gray-500">Buscando setores do sistema</p>
           </div>
         </div>
@@ -74,13 +104,16 @@ const Setores: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-red-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">Gerenciar Setores</h1>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              Gerenciar Setores
+            </h1>
             <p className="text-gray-600">Crie e organize os setores da empresa</p>
           </div>
           <button
-            onClick={handleOpenCreateModal}
+            onClick={handleOpenCriar}
             className="px-6 py-3 bg-[#4c010c] text-white rounded-xl hover:bg-[#3a0109] transition-all font-bold shadow-lg hover:shadow-xl flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
@@ -88,6 +121,7 @@ const Setores: React.FC = () => {
           </button>
         </div>
 
+        {/* Search */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -101,6 +135,7 @@ const Setores: React.FC = () => {
           </div>
         </div>
 
+        {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSetores.length === 0 ? (
             <div className="col-span-full text-center py-16 bg-white rounded-2xl shadow-sm">
@@ -109,7 +144,7 @@ const Setores: React.FC = () => {
                 Nenhum setor encontrado
               </p>
               <button
-                onClick={handleOpenCreateModal}
+                onClick={handleOpenCriar}
                 className="mt-4 px-6 py-2 bg-[#4c010c] text-white rounded-lg hover:bg-[#3a0109] transition-colors inline-flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
@@ -128,17 +163,30 @@ const Setores: React.FC = () => {
                       <Building className="w-6 h-6 text-[#4c010c]" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">{setor.nome}</h3>
+                      <h3 className="text-xl font-bold text-gray-800">
+                        {setor.nome}
+                      </h3>
                       <span className="text-xs text-gray-500">ID #{setor.id}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleOpenEditModal(setor)}
-                    className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Editar"
-                  >
-                    <Edit2 className="w-5 h-5 text-yellow-600" />
-                  </button>
+
+                  {/* Actions */}
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleOpenEditar(setor)}
+                      className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4 text-yellow-600" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete({ open: true, setor })}
+                      className="p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"
+                      title="Deletar"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-gray-200">
@@ -153,11 +201,32 @@ const Setores: React.FC = () => {
         </div>
       </div>
 
-      <EditSetor
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        setor={setorToEdit}
+      {/* Modal Criar */}
+      <CriarSetor
+        open={isCriarOpen}
+        onOpenChange={setIsCriarOpen}
         onSuccess={handleSuccess}
+      />
+
+      {/* Modal Editar */}
+      {setorToEdit && (
+        <EditarSetor
+          open={isEditarOpen}
+          onOpenChange={handleCloseEditar}
+          setor={setorToEdit}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {/* Dialog Confirmar Exclusão */}
+      <ConfirmDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => setConfirmDelete({ open, setor: null })}
+        title="Confirmar exclusão"
+        description={`Tem certeza que deseja excluir o setor "${confirmDelete.setor?.nome}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={handleDelete}
       />
     </div>
   );
