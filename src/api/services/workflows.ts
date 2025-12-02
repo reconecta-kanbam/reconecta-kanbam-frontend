@@ -1,42 +1,34 @@
 // src/api/services/workflows.ts
+
 import api from "../api";
 import ENDPOINTS from "../endpoints";
+import type { Workflow, CreateWorkflowRequest, UpdateWorkflowRequest } from "../types/workflow";
 
-export interface Workflow {
-  id: number;
-  nome: string;
-  descricao?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateWorkflowRequest {
-  nome: string;
-  descricao?: string;
-}
-
-export interface UpdateWorkflowRequest {
-  nome: string;
-  descricao?: string;
-}
-
+// Listar todos os workflows (ordenados por ID ascendente)
 export const listWorkflows = async (): Promise<Workflow[]> => {
-  const response = await api.get<Workflow[]>(ENDPOINTS.LIST_WORKFLOWS || "/workflows");
+  const response = await api.get<Workflow[]>(ENDPOINTS.LIST_WORKFLOWS);
+  return response.data.sort((a, b) => a.id - b.id);
+};
+
+// Buscar workflow por ID
+export const getWorkflowById = async (id: number): Promise<Workflow> => {
+  const response = await api.get<Workflow>(`${ENDPOINTS.LIST_WORKFLOWS}/${id}`);
   return response.data;
 };
 
+// Criar novo workflow
 export const createWorkflow = async (data: CreateWorkflowRequest): Promise<Workflow> => {
-  const payload = { nome: data.nome, descricao: data.descricao || undefined };
-  const response = await api.post<Workflow>(ENDPOINTS.CREATE_WORKFLOW || "/workflows", payload);
+  const response = await api.post<Workflow>(ENDPOINTS.CREATE_WORKFLOW, data);
   return response.data;
 };
 
+// Atualizar workflow existente
 export const updateWorkflow = async (id: number, data: UpdateWorkflowRequest): Promise<Workflow> => {
-  const payload = { nome: data.nome, descricao: data.descricao || undefined };
-  const response = await api.patch<Workflow>(ENDPOINTS.UPDATE_WORKFLOW?.(id) || `/workflows/${id}`, payload);
+  const response = await api.patch<Workflow>(ENDPOINTS.UPDATE_WORKFLOW(id), data);
   return response.data;
 };
 
+// Deletar workflow
 export const deleteWorkflow = async (id: number): Promise<void> => {
-  await api.delete(ENDPOINTS.DELETE_WORKFLOW?.(id) || `/workflows/${id}`);
+  await api.delete(ENDPOINTS.DELETE_WORKFLOW(id));
 };

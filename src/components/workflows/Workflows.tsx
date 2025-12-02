@@ -1,50 +1,29 @@
-// src/components/workflows/Workflows.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow } from "../../api/services/workflows";
+import { listWorkflows, deleteWorkflow } from "../../api/services/workflows";
+import type { Workflow } from "../../api/types/workflow";
+import { toast } from "sonner";
 import { Folder, Plus, Edit2, Trash2, ArrowRight, Layers, Clock, Calendar } from "lucide-react";
-
-interface Workflow {
-  id: number;
-  nome: string;
-  descricao?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import ConfirmDialog from "../../ErrorMessage/services/btnDelet";
+import CriarWorkflow from "./CriarWorkflow";
+import EditarWorkflow from "./EditarWorkflow";
 
 const Workflows: React.FC = () => {
   const navigate = useNavigate();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Estados do formulário
-  const [showForm, setShowForm] = useState(false);
-  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
-  const [formNome, setFormNome] = useState("");
-  const [formDesc, setFormDesc] = useState("");
 
-  // Estados de notificação
-  const [notification, setNotification] = useState<{
-    show: boolean;
-    message: string;
-    type: "success" | "error";
-  }>({ show: false, message: "", type: "success" });
+  // Modais
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [workflowToEdit, setWorkflowToEdit] = useState<Workflow | null>(null);
 
-  // Estado de confirmação de exclusão
+  // Confirmação de exclusão
   const [confirmDelete, setConfirmDelete] = useState<{
     open: boolean;
     id: number | null;
     nome: string;
   }>({ open: false, id: null, nome: "" });
-
-  // ==================== FUNÇÕES UTILITÁRIAS ====================
-
-  const showNotification = (message: string, type: "success" | "error" = "success") => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => {
-      setNotification({ show: false, message: "", type: "success" });
-    }, 4000);
-  };
 
   const loadWorkflows = async () => {
     try {
@@ -52,7 +31,7 @@ const Workflows: React.FC = () => {
       const data = await listWorkflows();
       setWorkflows(data);
     } catch (error) {
-      showNotification("Erro ao carregar workflows", "error");
+      toast.error("Erro ao carregar workflows");
     } finally {
       setLoading(false);
     }
@@ -62,87 +41,33 @@ const Workflows: React.FC = () => {
     loadWorkflows();
   }, []);
 
-  // ==================== HANDLERS ====================
+  const handleOpenEditModal = (workflow: Workflow) => {
+    setWorkflowToEdit(workflow);
+    setIsEditModalOpen(true);
+  };
 
-  const handleCreate = async () => {
-    if (!formNome.trim()) {
-      showNotification("Nome do workflow é obrigatório", "error");
-      return;
-    }
+  const handleDelete = async () => {
+    if (confirmDelete.id === null) return;
 
     try {
-      await createWorkflow({
-        nome: formNome.trim(),
-        descricao: formDesc.trim() || undefined,
-      });
-
-      showNotification(`Workflow "${formNome}" criado com sucesso!`, "success");
-      setFormNome("");
-      setFormDesc("");
-      setShowForm(false);
-      loadWorkflows();
+      await deleteWorkflow(confirmDelete.id);
+      toast.success(`Workflow "${confirmDelete.nome}" deletado com sucesso!`);
+      setWorkflows((prev) => prev.filter((w) => w.id !== confirmDelete.id));
+      setConfirmDelete({ open: false, id: null, nome: "" });
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
-      showNotification(`Erro: ${errorMessage}`, "error");
+      const errorMessage = error?.response?.data?.message || "Erro ao deletar workflow";
+      toast.error(errorMessage);
     }
-  };
-
-  const handleUpdate = async () => {
-    if (!editingWorkflow) return;
-
-    if (!formNome.trim()) {
-      showNotification("Nome do workflow é obrigatório", "error");
-      return;
-    }
-
-    try {
-      await updateWorkflow(editingWorkflow.id, {
-        nome: formNome.trim(),
-        descricao: formDesc.trim() || undefined,
-      });
-
-      showNotification("Workflow atualizado com sucesso!", "success");
-      setEditingWorkflow(null);
-      setFormNome("");
-      setFormDesc("");
-      setShowForm(false);
-      loadWorkflows();
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
-      showNotification(`Erro: ${errorMessage}`, "error");
-    }
-  };
-
-  const handleDelete = async (id: number, nome: string) => {
-    try {
-      await deleteWorkflow(id);
-      showNotification(`Workflow "${nome}" deletado com sucesso!`, "success");
-      loadWorkflows();
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
-      showNotification(`Erro: ${errorMessage}`, "error");
-    }
-  };
-
-  const startEdit = (workflow: Workflow) => {
-    setEditingWorkflow(workflow);
-    setFormNome(workflow.nome);
-    setFormDesc(workflow.descricao || "");
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setEditingWorkflow(null);
-    setFormNome("");
-    setFormDesc("");
-    setShowForm(false);
   };
 
   const handleViewWorkflow = (workflowId: number) => {
     navigate(`/kanban-board?workflowId=${workflowId}`);
   };
 
-  // ==================== RENDER ====================
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("pt-BR");
+  };
 
   if (loading) {
     return (
@@ -171,19 +96,17 @@ const Workflows: React.FC = () => {
         <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Meus Workflows
-              </h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Meus Workflows</h1>
               <p className="text-gray-600">
                 Organize suas ocorrências em projetos e fluxos de trabalho
               </p>
             </div>
             <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-[#4c010c] text-white px-6 py-3 rounded-lg hover:bg-[#6a0110] transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 bg-[#4c010c] text-white px-6 py-3 rounded-lg hover:bg-[#3a0109] transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
             >
               <Plus className="w-5 h-5" />
-              <span className="font-semibold">Novo Workflow</span>
+              Novo Workflow
             </button>
           </div>
         </div>
@@ -192,7 +115,6 @@ const Workflows: React.FC = () => {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-8 py-8">
         {workflows.length === 0 ? (
-          /* Empty State */
           <div className="flex flex-col items-center justify-center py-20">
             <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md text-center border-2 border-dashed border-gray-300">
               <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -202,12 +124,11 @@ const Workflows: React.FC = () => {
                 Nenhum workflow criado
               </h2>
               <p className="text-gray-600 mb-6">
-                Crie seu primeiro workflow para começar a organizar suas
-                ocorrências de forma estruturada
+                Crie seu primeiro workflow para começar a organizar suas ocorrências
               </p>
               <button
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center gap-2 bg-[#4c010c] text-white px-6 py-3 rounded-lg hover:bg-[#6a0110] transition-colors font-medium"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center gap-2 bg-[#4c010c] text-white px-6 py-3 rounded-lg hover:bg-[#3a0109] transition-colors font-medium"
               >
                 <Plus className="w-5 h-5" />
                 Criar Primeiro Workflow
@@ -215,7 +136,6 @@ const Workflows: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Grid de Workflows */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {workflows.map((workflow) => (
               <div
@@ -226,19 +146,19 @@ const Workflows: React.FC = () => {
                 <div className="bg-gradient-to-br from-[#4c010c] to-[#8b0000] p-6 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-16 -mt-16"></div>
                   <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-5 rounded-full -ml-12 -mb-12"></div>
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                         <Layers className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            startEdit(workflow);
+                            handleOpenEditModal(workflow);
                           }}
-                          className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                           title="Editar workflow"
                         >
                           <Edit2 className="w-5 h-5" />
@@ -252,20 +172,18 @@ const Workflows: React.FC = () => {
                               nome: workflow.nome,
                             });
                           }}
-                          className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                           title="Deletar workflow"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
-                    
-                    <h3 className="text-xl font-bold mb-2 truncate">
-                      {workflow.nome}
-                    </h3>
-                    
+
+                    <h3 className="text-xl font-bold mb-2 truncate">{workflow.nome}</h3>
+
                     {workflow.descricao && (
-                      <p className="text-white text-opacity-90 text-sm line-clamp-2">
+                      <p className="text-white/90 text-sm line-clamp-2">
                         {workflow.descricao}
                       </p>
                     )}
@@ -277,17 +195,11 @@ const Workflows: React.FC = () => {
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="w-4 h-4 text-[#4c010c]" />
-                      <span>
-                        Criado em{" "}
-                        {/* {new Date(workflow.createdAt).toLocaleDateString("pt-BR")} */}
-                      </span>
+                      <span>Criado em {formatDate(workflow.createdAt)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Clock className="w-4 h-4 text-[#4c010c]" />
-                      <span>
-                        Atualizado em{" "}
-                        {/* {new Date(workflow.updatedAt).toLocaleDateString("pt-BR")} */}
-                      </span>
+                      <span>Atualizado em {formatDate(workflow.updatedAt)}</span>
                     </div>
                   </div>
 
@@ -305,146 +217,28 @@ const Workflows: React.FC = () => {
         )}
       </div>
 
-      {/* Modal de Criação/Edição */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#4c010c] to-[#8b0000] px-6 py-5 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold">
-                    {editingWorkflow ? "Editar Workflow" : "Criar Novo Workflow"}
-                  </h3>
-                  <p className="text-white text-opacity-90 text-sm mt-1">
-                    {editingWorkflow 
-                      ? "Atualize as informações do seu workflow"
-                      : "Organize suas ocorrências em um novo fluxo"
-                    }
-                  </p>
-                </div>
-                <button
-                  onClick={cancelForm}
-                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
-                >
-                  <span className="text-2xl">×</span>
-                </button>
-              </div>
-            </div>
+      {/* Modais */}
+      <CriarWorkflow
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={loadWorkflows}
+      />
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nome do Workflow *
-                </label>
-                <input
-                  type="text"
-                  value={formNome}
-                  onChange={(e) => setFormNome(e.target.value)}
-                  placeholder="Ex: Projeto Alpha, Q1 2024, Migração de Sistema"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all"
-                  autoFocus
-                />
-              </div>
+      <EditarWorkflow
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        workflow={workflowToEdit}
+        onSuccess={loadWorkflows}
+      />
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  value={formDesc}
-                  onChange={(e) => setFormDesc(e.target.value)}
-                  placeholder="Descreva o objetivo deste workflow..."
-                  rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all resize-none"
-                />
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-50 px-6 py-4 flex gap-3">
-              <button
-                onClick={cancelForm}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={editingWorkflow ? handleUpdate : handleCreate}
-                className="flex-1 px-4 py-3 bg-[#4c010c] text-white rounded-lg hover:bg-[#6a0110] transition-colors font-medium shadow-lg"
-              >
-                {editingWorkflow ? "Salvar Alterações" : "Criar Workflow"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmação de Exclusão */}
-      {confirmDelete.open && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  Confirmar Exclusão
-                </h3>
-                <p className="text-sm text-gray-600">Esta ação não pode ser desfeita</p>
-              </div>
-            </div>
-
-            <p className="text-gray-700 mb-6">
-              Tem certeza que deseja deletar o workflow{" "}
-              <strong className="text-gray-900">"{confirmDelete.nome}"</strong>?
-              <br />
-              <br />
-              <span className="text-red-600 font-medium">
-                ⚠️ Todas as ocorrências associadas perderão a referência a este workflow.
-              </span>
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete({ open: false, id: null, nome: "" })}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  if (confirmDelete.id !== null) {
-                    await handleDelete(confirmDelete.id, confirmDelete.nome);
-                  }
-                  setConfirmDelete({ open: false, id: null, nome: "" });
-                }}
-                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-              >
-                Deletar Workflow
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notificação Toast */}
-      {notification.show && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 ${
-            notification.type === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {notification.type === "success" ? "✅" : "❌"}
-            <span className="font-medium">{notification.message}</span>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => setConfirmDelete({ open, id: null, nome: "" })}
+        title="Excluir Workflow"
+        description={`Tem certeza que deseja deletar "${confirmDelete.nome}"? Todas as ocorrências associadas perderão a referência a este workflow.`}
+        confirmText="Deletar"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
