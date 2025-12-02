@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Plus, Search, Eye, Calendar, Trash2, Edit2, Link, FileCheck } from "lucide-react";
 import Filters, { FilterOptions } from "../Filters/Filters";
 import TaskDetailDialog from "../kanbanBoard/dialogs/TaskDetailDialog";
-import ConfirmDialog from "../../ErrorMessage/services/btnDelet";
+import ConfirmDialog from "../../ErrorMessage/services/btnDelete";
 import EditOccurrence from "./EditOccurrence";
 
 const Occurrences: React.FC = () => {

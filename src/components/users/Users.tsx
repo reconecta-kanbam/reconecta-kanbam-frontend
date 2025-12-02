@@ -6,7 +6,7 @@ import type { Colaborador } from "../../api/services/usuario";
 import api from "../../api/api";
 import UserModal from "./UserModal";
 import EditUserDialog from "./EditUserDialog";
-import ConfirmDialog from "../../ErrorMessage/services/btnDelet";
+import ConfirmDialog from "../../ErrorMessage/services/btnDelete";
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<Colaborador[]>([]);

@@ -4,7 +4,7 @@ import { listWorkflows, deleteWorkflow } from "../../api/services/workflows";
 import type { Workflow } from "../../api/types/workflow";
 import { toast } from "sonner";
 import { Folder, Plus, Edit2, Trash2, ArrowRight, Layers, Clock, Calendar } from "lucide-react";
-import ConfirmDialog from "../../ErrorMessage/services/btnDelet";
+import ConfirmDialog from "../../ErrorMessage/services/btnDelete";
 import CriarWorkflow from "./CriarWorkflow";
 import EditarWorkflow from "./EditarWorkflow";
 

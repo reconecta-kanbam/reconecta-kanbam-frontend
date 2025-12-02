@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Plus, Search, Edit2, Trash2, Building, Users } from "lucide-react";
 import CriarSetor from "./CreateSectors";
 import EditarSetor from "./EditSectors";
-import ConfirmDialog from "../../ErrorMessage/services/btnDelet";
+import ConfirmDialog from "../../ErrorMessage/services/btnDelete";
 
 const Setores: React.FC = () => {
   const [setores, setSetores] = useState<Setor[]>([]);
