@@ -5,8 +5,8 @@ import type { Workflow } from "../../api/types/workflow";
 import { toast } from "sonner";
 import { Folder, Plus, Edit2, Trash2, ArrowRight, Layers, Clock, Calendar } from "lucide-react";
 import ConfirmDialog from "../../ErrorMessage/services/btnDelete";
-import CriarWorkflow from "./CriarWorkflow";
-import EditarWorkflow from "./EditarWorkflow";
+import CriarWorkflow from "./CreateWorkflow";
+import EditarWorkflow from "./EditWorkflow";
 
 const Workflows: React.FC = () => {
   const navigate = useNavigate();
