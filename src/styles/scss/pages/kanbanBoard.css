@@ -48,7 +48,7 @@
   box-shadow: 0 0 60px #00000026;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters {
+.pgKanbanBoard__workflowBar__right__filters__Filters {
     border-radius: 0.375rem;
     font-weight: 600;
     line-height: 1.25rem;
@@ -61,7 +61,7 @@
     display: block;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box {
+.pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box {
     display: flex;
     justify-content: space-between;
     padding: 0.75rem 1.1rem;
@@ -70,19 +70,19 @@
     transition: 0.35s all;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box:hover {
+.pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box:hover {
     transition: 0.45s all;
     opacity: 0.8;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__iconFiltro {
+.pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__iconFiltro {
     width: 20px;
     height: 20px;
     cursor: pointer;
     color: var(--details-color);
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__title {
+.pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__title {
     font-size: var(--normal-font-size);
     font-weight: var(--font-semi-bold);
     color: var(--details-color);
@@ -91,7 +91,7 @@
 }
 
 /* ====== Filtros expandidos ====== */
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter {
+.pgKanbanBoard__workflowBar__right__filters__Filters__filter {
     display: flex;
     justify-content: space-between;
     padding: 0.75rem 1.1rem;
@@ -101,21 +101,21 @@
     flex-direction: column;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__box {
+.pgKanbanBoard__workflowBar__right__filters__Filters__filter__box {
     display: flex;
     flex-direction: column;
     gap: 5px;  
     text-align: left;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__label {
+.pgKanbanBoard__workflowBar__right__filters__Filters__filter__label {
     font-size: var(--small-font-size);
     font-weight: var(--font-semi-bold);
     color: var(--gray-700);
     padding: 0;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__result {
+.pgKanbanBoard__workflowBar__right__filters__Filters__result {
     display: flex;
     justify-content: space-evenly;
     flex-direction: column;
@@ -124,7 +124,7 @@
     padding-bottom: 0.75rem;
 }
 
-.pgKanbanBoard__workflowBar__right__filters__advancedFilters__result__button {
+.pgKanbanBoard__workflowBar__right__filters__Filters__result__button {
   width: 90%;
 }
 

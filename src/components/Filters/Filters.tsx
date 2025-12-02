@@ -12,7 +12,7 @@ export interface FilterOptions {
   gestorId?: number;
 }
 
-interface AdvancedFiltersProps {
+interface FiltersProps {
   onFiltersChange: (filters: FilterOptions) => void;
   showStatusFilter?: boolean;
   showCollaboratorFilter?: boolean;
@@ -39,7 +39,7 @@ interface Status {
   chave?: string;
 }
 
-const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
+const Filters: React.FC<FiltersProps> = ({
   onFiltersChange,
   showStatusFilter = true,
   showCollaboratorFilter = true,
@@ -201,29 +201,29 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   const activeFiltersCount = Object.keys(filters).length;
 
   return (
-    <div ref={filterRef} className="pgKanbanBoard__workflowBar__right__filters__advancedFilters">
+    <div ref={filterRef} className="pgKanbanBoard__workflowBar__right__filters__Filters">
       
       {/* Header do filtro */}
-      <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs">
-        <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box">
+      <div className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs">
+        <div className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box">
           {/* Ícone muda: Filter quando fechado, X quando aberto */}
           {isExpanded ? (
             <X 
-              className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__iconFiltro pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__iconFiltro--close" 
+              className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__iconFiltro pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__iconFiltro--close" 
               onClick={closeFilters}
             />
           ) : (
             <Filter 
-              className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__iconFiltro"
+              className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__iconFiltro"
               onClick={toggleFilters}
             />
           )}
           
-          <h3 className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__title" onClick={toggleFilters}>Filtros</h3>
+          <h3 className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__title" onClick={toggleFilters}>FiltrosS</h3>
 
           {/* Badge de contagem quando há filtros ativos E não está expandido */}
           {activeFiltersCount > 0 && !isExpanded && (
-            <span className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__boxs__box__badge">
+            <span className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__badge">
               {activeFiltersCount}
             </span>
           )}
@@ -239,7 +239,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
       {/* Filtros expandidos */}
       {isExpanded && (
-        <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter">
+        <div className="pgKanbanBoard__workflowBar__right__filters__Filters__filter">
           {loading && (
             <div className="text-center py-4">
               <div className="w-6 h-6 border-2 border-[#4c010c] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -252,8 +252,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           {!loading && (
             <>
               {/* Pesquisa por título */}
-              <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__box">
-                <label className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__label">
+              <div className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__box">
+                <label className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__label">
                   Buscar por título
                 </label>
                 <div className="relative">
@@ -268,8 +268,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
               </div>
 
               {/* Filtro por setor */}
-              <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__box">
-                <label className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__label">
+              <div className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__box">
+                <label className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__label">
                   Setor
                 </label>
                 <select
@@ -289,8 +289,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
               {/* Filtro por colaborador */}
               {showCollaboratorFilter && (
-                <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__box">
-                  <label className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__label">
+                <div className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__box">
+                  <label className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__label">
                     Colaborador
                   </label>
                   <select
@@ -314,8 +314,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
               {/* Filtro por gestor */}
               {showGestorFilter && (
-                <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__box">
-                  <label className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__label">
+                <div className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__box">
+                  <label className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__label">
                     Gestor
                   </label>
                   <select
@@ -336,8 +336,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
               {/* Filtro por status */}
               {showStatusFilter && (
-                <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__box">
-                  <label className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__filter__label">
+                <div className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__box">
+                  <label className="pgKanbanBoard__workflowBar__right__filters__Filters__filter__label">
                     Status
                   </label>
                   <select
@@ -362,13 +362,13 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
       {/* Resultado de filtros ativos */}
       {activeFiltersCount > 0 && (
-        <div className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__result">
+        <div className="pgKanbanBoard__workflowBar__right__filters__Filters__result">
           <span className="bg-[#4c010c] text-white text-xs px-2 py-1 rounded-full">
             {activeFiltersCount} - Resultado(s) Encontrado(s)
           </span>
           <button 
             onClick={clearFilters} 
-            className="pgKanbanBoard__workflowBar__right__filters__advancedFilters__result__button btn"
+            className="pgKanbanBoard__workflowBar__right__filters__Filters__result__button btn"
           >
             Limpar
           </button>
@@ -378,4 +378,4 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   );
 };
 
-export default AdvancedFilters;
+export default Filters;

@@ -3,9 +3,9 @@ import { listOcorrencias, deleteOcorrencia } from "../../api/services/ocorrencia
 import type { Ocorrencia } from "../../api/types/ocorrencia";
 import { toast } from "sonner";
 import { Plus, Search, Eye, Calendar, Trash2, Edit2, Link, FileCheck } from "lucide-react";
-import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
+import Filters, { FilterOptions } from "../Filters/Filters";
 import TaskDetailDialog from "../kanbanBoard/dialogs/TaskDetailDialog";
-import ConfirmDialog from "../ui/ConfirmDialog";
+import ConfirmDialog from "../../ErrorMessage/services/btnDelet";
 import EditOccurrence from "./EditOccurrence";
 
 const Occurrences: React.FC = () => {
@@ -120,7 +120,7 @@ const Occurrences: React.FC = () => {
         </div>
 
         <div className="mb-6 space-y-4">
-          <AdvancedFilters
+          <Filters
             onFiltersChange={(newFilters) => setFilters(newFilters)}
             showStatusFilter={true}
             showCollaboratorFilter={true}

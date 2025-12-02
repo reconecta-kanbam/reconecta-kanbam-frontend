@@ -11,7 +11,7 @@ import {
   LayoutGrid, List as ListIcon, Folder, ChevronDown, ArrowLeft
 } from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
-import AdvancedFilters, { FilterOptions } from "../ui/AdvancedFilters";
+import Filters, { FilterOptions } from "../Filters/Filters";
 import { listColaboradores, Colaborador } from "../../api/services/usuario";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -587,7 +587,7 @@ const KanbanBoard: React.FC = () => {
 
             {/* Filtros */}
             <div className="pgKanbanBoard__workflowBar__right__filters">
-              <AdvancedFilters
+              <Filters
                 onFiltersChange={handleFiltersChange}
                 showStatusFilter={false}
                 showCollaboratorFilter={true}
