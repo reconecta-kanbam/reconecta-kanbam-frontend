@@ -5,8 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
-  console.log("🔒 PrivateRoute:", { isAuthenticated, loading });
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -19,11 +17,9 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }
 
   if (!isAuthenticated) {
-    console.log("❌ PrivateRoute: Não autenticado, redirecionando para /login");
     return <Navigate to="/login" replace />;
   }
 
-  console.log("✅ PrivateRoute: Autenticado, renderizando conteúdo");
   return <>{children}</>;
 };
 

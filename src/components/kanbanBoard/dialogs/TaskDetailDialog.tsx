@@ -73,6 +73,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       try {
         const [userData, statusData] = await Promise.all([
           listUsers(),
+          // ✅ CORRIGIDO: Não passar workflowId para listar TODOS os status
           listStatus()
         ]);
         setUsers(userData);

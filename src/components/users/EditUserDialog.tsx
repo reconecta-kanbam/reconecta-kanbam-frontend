@@ -17,6 +17,11 @@ interface Setor {
   nome: string;
 }
 
+interface Workflow {
+  id: number;
+  nome: string;
+}
+
 const EditUserDialog: React.FC<EditUserDialogProps> = ({
   isOpen,
   onClose,
@@ -30,24 +35,29 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     perfil: "COLABORADOR",
     setorId: "",
     peso: "1",
+    workflowIds: [] as number[],
   });
   const [setores, setSetores] = useState<Setor[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (isOpen && user) {
-      // CORREÇÃO: Buscar setorId do objeto setor se disponível
-      const setorId = user.setorId || user.setor?.id || "";
-      
+      const setorId = user.setorId || (user as any).setor?.id || "";
+      // ✅ MUDANÇA: Pegar workflowIds diretamente (é um array de números agora)
+      const workflowIds = (user as any).workflowIds || [];
+
       setFormData({
         nome: user.nome || "",
         email: user.email || "",
         perfil: user.perfil || "COLABORADOR",
         setorId: setorId.toString(),
         peso: user.peso?.toString() || "1",
+        workflowIds: Array.isArray(workflowIds) ? workflowIds : [], // ✅ Garantir que é um array
       });
       loadSetores();
+      loadWorkflows();
     }
   }, [isOpen, user]);
 
@@ -61,6 +71,25 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     }
   };
 
+  const loadWorkflows = async () => {
+    try {
+      // ✅ Remover cache completamente
+      const response = await api.get("/workflows", {
+        params: { _t: Date.now() },
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      setWorkflows(response.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar workflows:", error);
+      toast.error("Erro ao carregar workflows");
+      setWorkflows([]);
+    }
+  };
+
   const canEditFields = (): boolean => {
     if (currentUserPerfil === "ADMIN") return true;
     if (currentUserPerfil === "GESTOR" && user?.perfil === "COLABORADOR") return true;
@@ -69,6 +98,15 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
 
   const canEditPerfil = (): boolean => {
     return currentUserPerfil === "ADMIN";
+  };
+
+  const handleWorkflowToggle = (workflowId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      workflowIds: prev.workflowIds.includes(workflowId)
+        ? prev.workflowIds.filter((id) => id !== workflowId)
+        : [...prev.workflowIds, workflowId],
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +124,6 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       return;
     }
 
-    // CORREÇÃO: Validar setorId antes de enviar
     const setorIdParsed = parseInt(formData.setorId);
     if (!formData.setorId || isNaN(setorIdParsed)) {
       setError("Selecione um setor válido");
@@ -101,27 +138,25 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         nome: formData.nome,
         email: formData.email,
         peso: peso,
+        workflowIds: formData.workflowIds,
       };
 
-      // CORREÇÃO: Só adiciona perfil se puder editar
       if (canEditPerfil()) {
         payload.perfil = formData.perfil;
       }
 
-      // CORREÇÃO: Só adiciona setorId se for um número válido
       if (!isNaN(setorIdParsed) && setorIdParsed > 0) {
         payload.setorId = setorIdParsed;
       }
-
-      console.log(`📤 Atualizando usuário ${user.id} com payload:`, payload);
 
       await api.patch(`/users/${user.id}`, payload);
 
       toast.success("Usuário atualizado com sucesso!");
       onSuccess();
+      
     } catch (error: any) {
       console.error("Erro ao atualizar usuário:", error);
-      
+
       if (error.response?.status === 404 || error.response?.status === 405) {
         setError(
           "⚠️ Endpoint PATCH /users/:id não está implementado no backend. " +
@@ -281,6 +316,35 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               <p className="mt-1 text-xs text-gray-500">
                 Define a distribuição de atendimentos
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Workflows {canEditFields() && <span className="text-red-500">*</span>}
+              </label>
+              <div className="space-y-2 border border-gray-300 rounded-lg p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                {workflows.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhum workflow disponível</p>
+                ) : (
+                  workflows.map((workflow) => (
+                    <label
+                      key={workflow.id}
+                      className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+                        !canEditFields() ? "opacity-50 cursor-not-allowed" : "hover:bg-white"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.workflowIds.includes(workflow.id)}
+                        onChange={() => handleWorkflowToggle(workflow.id)}
+                        disabled={!canEditFields()}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm text-gray-700">{workflow.nome}</span>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 

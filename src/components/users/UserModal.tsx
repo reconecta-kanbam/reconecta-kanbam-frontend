@@ -72,12 +72,9 @@ const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSuccess }) => 
         peso: peso,
       };
 
-      // CORREÇÃO: Só adiciona setorId se for um número válido
       if (!isNaN(setorIdParsed) && setorIdParsed > 0) {
         payload.setorId = setorIdParsed;
       }
-
-      console.log("📤 Criando usuário com payload:", payload);
 
       await api.post("/users", payload);
 

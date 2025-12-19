@@ -219,7 +219,7 @@ const Filters: React.FC<FiltersProps> = ({
             />
           )}
           
-          <h3 className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__title" onClick={toggleFilters}>FiltrosS</h3>
+          <h3 className="pgKanbanBoard__workflowBar__right__filters__Filters__boxs__box__title" onClick={toggleFilters}>Filtros</h3>
 
           {/* Badge de contagem quando há filtros ativos E não está expandido */}
           {activeFiltersCount > 0 && !isExpanded && (

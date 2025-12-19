@@ -135,19 +135,18 @@ export const getCurrentUserFromToken = (): {
 };
 
 // CORREÇÃO: Atualizar próprio perfil usando ID do token
-export const updateMe = async (data: UpdateMeRequest): Promise<Colaborador> => {
-  // Buscar ID do usuário logado a partir do token
-  const tokenData = getCurrentUserFromToken();
-  if (!tokenData) {
-    throw new Error("Usuário não autenticado");
-  }
+export const updateMe = async (data: {
+  nome?: string;
+  email?: string;
+  senhaAtual?: string;
+  senha?: string;
+  setorId?: number;
+}) => {
+  console.log("📤 Enviando atualização para /users/me:", data); // ✅ DEBUG
 
-  console.log("📤 Atualizando próprio perfil:", data);
-  
-  // Usar /users/{id} em vez de /users/me para evitar problema de roteamento
-  const response = await api.patch<Colaborador>(`/users/${tokenData.id}`, data);
-  
-  console.log("✅ Perfil atualizado:", response.data);
+  const response = await api.patch("/users/me", data);
+
+  console.log("✅ Resposta recebida:", response.data); // ✅ DEBUG
   return response.data;
 };
 
@@ -156,9 +155,7 @@ export const updateUser = async (
   userId: number,
   data: UpdateUserRequest
 ): Promise<Colaborador> => {
-  console.log(`📤 Atualizando usuário ${userId}:`, data);
   const response = await api.patch<Colaborador>(`/users/${userId}`, data);
-  console.log("✅ Usuário atualizado:", response.data);
   return response.data;
 };
 
@@ -166,6 +163,30 @@ export const updateUser = async (
 export const getUser = async (userId: number): Promise<Colaborador> => {
   const response = await api.get<Colaborador>(`/users/${userId}`);
   return response.data;
+};
+
+// ✅ CORRIGIDO: Função para alterar senha usando updateMe
+export const changePassword = async (senhaAtual: string, novaSenha: string) => {
+  console.log("📤 Enviando request para /users/me com senhaAtual e novaSenha"); // ✅ DEBUG
+  
+  try {
+    const response = await api.patch('/users/me', {
+      senhaAtual,
+      senha: novaSenha,
+    });
+    
+    console.log("✅ Response recebido:", response.data); // ✅ DEBUG
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ Erro na request:", {
+      status: error.response?.status,
+      message: error.response?.data?.message,
+      error: error.response?.data,
+    });
+    
+    // ✅ IMPORTANTE: Propagar o erro completo (incluindo status)
+    throw error;
+  }
 };
 
 export const logoutUser = () => {

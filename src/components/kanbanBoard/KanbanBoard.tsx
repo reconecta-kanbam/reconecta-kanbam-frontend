@@ -1,18 +1,18 @@
 // src/components/kanbanBoard/KanbanBoard.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { getKanbanData, KanbanFilters } from "../../api/services/kanban";
-import { updateStatusViaDrag, assignOcorrencia, autoAssignOcorrencia } from "../../api/services/ocorrencias";
-import { listStatus, createStatus, updateStatus, deleteStatus, Status } from "../../api/services/status";
+import { getKanbanData } from "../../api/services/kanban";
+import { updateStatusViaDrag, assignOcorrencia, autoAssignOcorrencia, createOcorrencia } from "../../api/services/ocorrencias";
+import { createStatus, updateStatus, deleteStatus } from "../../api/services/status";
 import { listWorkflows, createWorkflow, updateWorkflow, deleteWorkflow } from "../../api/services/workflows";
 import { Column, Card } from "../../api/types/kanban";
 import { 
   User, GripVertical, Eye, Calendar, Settings, Plus, Edit2, Trash2, 
-  LayoutGrid, List as ListIcon, Folder, ChevronDown, ArrowLeft
+  LayoutGrid, List as ListIcon, Folder, ChevronDown, ArrowLeft, Send
 } from "lucide-react";
 import TaskDetailDialog from "./dialogs/TaskDetailDialog";
 import Filters, { FilterOptions } from "../Filters/Filters";
-import { listColaboradores, Colaborador } from "../../api/services/usuario";
+import { listColaboradores } from "../../api/services/usuario";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type ViewMode = "kanban" | "list";
@@ -44,19 +44,22 @@ const KanbanBoard: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [dragging, setDragging] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({});
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+
+  // Estados de Criação de Ocorrência
+  const [creatingInColumn, setCreatingInColumn] = useState<string | null>(null);
+  const [newOcorrenciaTitle, setNewOcorrenciaTitle] = useState("");
+  const [loadingOcorrencia, setLoadingOcorrencia] = useState(false);
 
   // Estados do gerenciador
   const [showManager, setShowManager] = useState(false);
   const [managerMode, setManagerMode] = useState<ManagerMode>("status");
 
   // Estados de Status
-  const [editingStatus, setEditingStatus] = useState<Status | null>(null);
+  const [editingStatus, setEditingStatus] = useState<any | null>(null);
   const [newStatusChave, setNewStatusChave] = useState("");
   const [newStatusNome, setNewStatusNome] = useState("");
-  const [newStatusOrdem, setNewStatusOrdem] = useState<number>(1);
   const [newStatusWorkflowId, setNewStatusWorkflowId] = useState<number | undefined>(undefined);
 
   // Estados de Workflow
@@ -68,7 +71,7 @@ const KanbanBoard: React.FC = () => {
   // Estados de Usuários Online
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
-  const [activeWorkflowId, setActiveWorkflowId] = useState<number | null>(initialWorkflowId);
+  const [activeWorkflowId, setActiveWorkflowId] = useState<number | null>(initialWorkflowId); // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
   // Estados de notificação e confirmação
   const [notification, setNotification] = useState<{
@@ -96,7 +99,7 @@ const KanbanBoard: React.FC = () => {
     }, 4000);
   };
 
-  const loadKanban = async (currentFilters: FilterOptions = {}) => {
+  const loadKanban = useCallback(async (currentFilters: FilterOptions = {}) => {
     try {
       setLoading(true);
       const filtersWithWorkflow = {
@@ -110,18 +113,77 @@ const KanbanBoard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeWorkflowId]);
 
-  const loadWorkflows = async () => {
+  const loadWorkflows = useCallback(async () => {
     try {
       const data = await listWorkflows();
       setWorkflows(data);
     } catch (error) {
       showNotification("Erro ao carregar workflows", "error");
     }
-  };
+  }, []);
+
+  const loadOnlineUsers = useCallback(async () => {
+    try {
+      const colaboradores = await listColaboradores();
+      const users = colaboradores.slice(0, 10).map((colab) => ({
+        id: colab.id,
+        nome: colab.nome,
+        email: colab.email,
+        iniciais: getInitials(colab.nome),
+        cor: getRandomColor(),
+      }));
+      setOnlineUsers(users);
+    } catch (error) {
+      console.error("Erro ao carregar usuários online:", error);
+    }
+  }, []);
 
   // ==================== HANDLERS DE OCORRÊNCIA ====================
+
+  const handleCreateOcorrenciaInColumn = async (columnId: string) => {
+    if (!newOcorrenciaTitle.trim()) {
+      showNotification("Título não pode estar vazio", "error");
+      return;
+    }
+
+    if (!activeWorkflowId) {
+      showNotification("Selecione um workflow primeiro", "error");
+      return;
+    }
+
+    setLoadingOcorrencia(true);
+    try {
+      const column = columns.find(col => col.id === columnId);
+      if (!column) {
+        showNotification("Coluna não encontrada", "error");
+        return;
+      }
+
+      // ✅ CORRIGIDO: Incluir statusId da coluna na criação
+      await createOcorrencia({
+        titulo: newOcorrenciaTitle.trim(),
+        workflowId: activeWorkflowId,
+        statusId: column.statusId, // ✅ ADICIONADO
+      } as any);
+
+      showNotification(`Ocorrência "${newOcorrenciaTitle}" criada com sucesso!`, "success");
+      setNewOcorrenciaTitle("");
+      setCreatingInColumn(null);
+      
+      // ✅ Recarregar o Kanban
+      setTimeout(() => {
+        loadKanban(filters);
+      }, 500);
+    } catch (error: any) {
+      console.error("Erro ao criar ocorrência:", error.response?.data || error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
+      showNotification(`Erro: ${errorMessage}`, "error");
+    } finally {
+      setLoadingOcorrencia(false);
+    }
+  };
 
   const handleAssignOcorrencia = async (ocorrenciaId: number, colaboradorId: number) => {
     try {
@@ -203,19 +265,25 @@ const KanbanBoard: React.FC = () => {
       const chaveGerada = generateChaveFromNome(newStatusNome);
       const proximaOrdem = columns.filter(c => c.id !== "sem_status").length + 1;
 
-      await createStatus({
+      const statusPayload = {
         chave: chaveGerada,
         nome: newStatusNome.trim(),
         ordem: proximaOrdem,
-        workflowId: newStatusWorkflowId,
-      });
+        workflowId: newStatusWorkflowId || (activeWorkflowId || undefined),
+      };
+
+
+      await createStatus(statusPayload);
 
       showNotification(`Status "${newStatusNome}" criado com sucesso!`, "success");
       setNewStatusChave("");
       setNewStatusNome("");
-      setNewStatusOrdem(proximaOrdem + 1);
       setNewStatusWorkflowId(undefined);
-      loadKanban(filters);
+      
+      // ✅ CORRIGIDO: Recarregar imediatamente
+      setTimeout(() => {
+        loadKanban(filters);
+      }, 300);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || "Erro desconhecido";
       showNotification(`Erro: ${errorMessage}`, "error");
@@ -271,8 +339,16 @@ const KanbanBoard: React.FC = () => {
     });
     setNewStatusChave(col.statusChave);
     setNewStatusNome(col.titulo);
-    setNewStatusOrdem(col.ordem);
     setNewStatusWorkflowId(col.workflowId);
+    setManagerMode("status");
+    setShowManager(true);
+  };
+
+  const openCreateStatusModal = () => {
+    setEditingStatus(null);
+    setNewStatusChave("");
+    setNewStatusNome("");
+    setNewStatusWorkflowId(activeWorkflowId || undefined);
     setManagerMode("status");
     setShowManager(true);
   };
@@ -400,7 +476,6 @@ const KanbanBoard: React.FC = () => {
     newColumns[destColIndex].cards.splice(destination.index, 0, movedCard);
 
     setColumns(newColumns);
-    setDragging(true);
 
     try {
       const newStatusId = destColumn.statusId;
@@ -442,8 +517,6 @@ const KanbanBoard: React.FC = () => {
         `Erro ao mover card: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
         "error"
       );
-    } finally {
-      setDragging(false);
     }
   };
 
@@ -463,52 +536,36 @@ const KanbanBoard: React.FC = () => {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  const loadOnlineUsers = async () => {
-    try {
-      const colaboradores = await listColaboradores();
-      const users = colaboradores.slice(0, 10).map((colab) => ({
-        id: colab.id,
-        nome: colab.nome,
-        email: colab.email,
-        iniciais: getInitials(colab.nome),
-        cor: getRandomColor(),
-      }));
-      setOnlineUsers(users);
-    } catch (error) {
-      console.error("Erro ao carregar usuários online:", error);
-    }
-  };
-
   // ==================== EFFECTS ====================
 
   useEffect(() => {
     loadWorkflows();
     loadOnlineUsers();
-  }, []);
+  }, [loadWorkflows, loadOnlineUsers]);
 
   useEffect(() => {
     loadKanban(filters);
-  }, [activeWorkflowId, filters]);
+  }, [activeWorkflowId, filters, loadKanban]);
 
   useEffect(() => {
     if (showManager && managerMode === "workflow") {
       loadWorkflows();
     }
-  }, [showManager, managerMode]);
+  }, [showManager, managerMode, loadWorkflows]);
 
   useEffect(() => {
     if (!showManager) {
-      setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
+      setNewStatusWorkflowId(activeWorkflowId || undefined);
     }
-  }, [columns, showManager]);
+  }, [columns, showManager, activeWorkflowId]);
 
   const handleFiltersChange = (newFilters: FilterOptions) => {
     setFilters(newFilters);
   };
 
-  const totalCards = columns.reduce((sum, col) => sum + col.cards.length, 0);
+  const totalCards = columns.reduce((sum, col) => sum + (col.cards?.length || 0), 0);
   const allCards = columns.flatMap((col) => 
-    col.cards.map(card => ({ ...card, columnTitle: col.titulo, columnId: col.id }))
+    (col.cards || []).map(card => ({ ...card, columnTitle: col.titulo, columnId: col.id }))
   );
 
   // ==================== RENDER ====================
@@ -657,21 +714,7 @@ const KanbanBoard: React.FC = () => {
                   </div>
                 </button>
 
-                <button
-                  onClick={() => {
-                    setManagerMode("workflow");
-                    setShowManager(true);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 rounded-lg transition-colors text-left"
-                >
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Folder className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-900">Workflows</div>
-                    <div className="text-xs text-gray-500">Agrupar ocorrências</div>
-                  </div>
-                </button>
+                
               </div>
             </div>
           </div>
@@ -744,7 +787,6 @@ const KanbanBoard: React.FC = () => {
                         setEditingWorkflow(null);
                         setNewStatusChave("");
                         setNewStatusNome("");
-                        setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
                         setNewStatusWorkflowId(undefined);
                         setNewWorkflowNome("");
                         setNewWorkflowDesc("");
@@ -809,26 +851,6 @@ const KanbanBoard: React.FC = () => {
                             )}
                           </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Workflow (opcional)
-                            </label>
-                            <select
-                              value={newStatusWorkflowId || ""}
-                              onChange={(e) => setNewStatusWorkflowId(e.target.value ? Number(e.target.value) : undefined)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Nenhum (Global)</option>
-                              {workflows.map((wf) => (
-                                <option key={wf.id} value={wf.id}>
-                                  {wf.nome}
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Status globais aparecem em todos os workflows
-                            </p>
-                          </div>
                         </div>
 
                         <div className="flex gap-3">
@@ -846,7 +868,6 @@ const KanbanBoard: React.FC = () => {
                                   setEditingStatus(null);
                                   setNewStatusChave("");
                                   setNewStatusNome("");
-                                  setNewStatusOrdem(columns.filter(c => c.id !== "sem_status").length + 1);
                                   setNewStatusWorkflowId(undefined);
                                 }}
                                 className="px-6 py-2 border border-gray-300 text-white rounded-lg hover:bg-gray-100 transition-colors font-medium"
@@ -945,7 +966,7 @@ const KanbanBoard: React.FC = () => {
                                               <div className="flex gap-1">
                                                 <button
                                                   onClick={() => startEditStatus(col)}
-                                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colores"
                                                   title="Editar"
                                                 >
                                                   <Edit2 className="w-4 h-4" />
@@ -959,7 +980,7 @@ const KanbanBoard: React.FC = () => {
                                                       type: "status",
                                                     })
                                                   }
-                                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colores"
                                                   title="Deletar"
                                                 >
                                                   <Trash2 className="w-4 h-4" />
@@ -1030,7 +1051,7 @@ const KanbanBoard: React.FC = () => {
                                   setNewWorkflowNome("");
                                   setNewWorkflowDesc("");
                                 }}
-                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colores font-medium"
                               >
                                 Cancelar
                               </button>
@@ -1079,7 +1100,7 @@ const KanbanBoard: React.FC = () => {
                                   <div className="flex gap-1">
                                     <button
                                       onClick={() => startEditWorkflow(workflow)}
-                                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colores"
                                       title="Editar"
                                     >
                                       <Edit2 className="w-4 h-4" />
@@ -1093,7 +1114,7 @@ const KanbanBoard: React.FC = () => {
                                           type: "workflow",
                                         })
                                       }
-                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colores"
                                       title="Deletar"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -1185,7 +1206,7 @@ const KanbanBoard: React.FC = () => {
                                     <h3 className="text-xl font-bold text-gray-800">{col.titulo}</h3>
                                   </div>
                                   <span className="bg-[#ffffa6] text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-300">
-                                    {col.cards.length}
+                                    {(col.cards || []).length}
                                   </span>
                                 </div>
 
@@ -1194,8 +1215,8 @@ const KanbanBoard: React.FC = () => {
                                     <div
                                       ref={provided.innerRef}
                                       {...provided.droppableProps}
-                                      className={`pgKanbanBoard__Workflows__column__content ${
-                                        col.cards.length === 0 ? "pgKanbanBoard__Workflows__column__content--empty" : ""
+                                      className={`pgKanbanBoard__Workflows__column__content flex-col${
+                                        (col.cards || []).length === 0 ? "pgKanbanBoard__Workflows__column__content--empty" : ""
                                       }`}
                                       style={{
                                         backgroundColor: snapshot.isDraggingOver ? "#fef2f2" : "transparent",
@@ -1204,9 +1225,9 @@ const KanbanBoard: React.FC = () => {
                                         transition: "background-color 0.2s ease",
                                       }}
                                     >
-                                      {col.cards.length > 0 ? (
+                                      {(col.cards || []).length > 0 ? (
                                         <div className="space-y-3 mr-3">
-                                          {col.cards.map((card, index) => (
+                                          {(col.cards || []).map((card, index) => (
                                             <Draggable key={card.id} draggableId={card.id} index={index}>
                                               {(provided, snapshot) => (
                                                 <div
@@ -1265,13 +1286,63 @@ const KanbanBoard: React.FC = () => {
                                         </div>
                                       ) : (
                                         <div className="flex items-center justify-center h-full w-full">
-                                          <p className="text-gray-400 text-sm italic text-center py-6 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                                          <p className=" w-full text-gray-400 text-sm italic text-center py-6 px-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
                                             Arraste cards para cá
                                           </p>
                                         </div>
                                       )}
 
                                       {provided.placeholder}
+
+                                      {/* 👇 INPUT PARA CRIAR OCORRÊNCIA */}
+                                      <div className="mt-3 mr-3">
+                                        {creatingInColumn === col.id ? (
+                                          <div className="flex gap-2">
+                                            <input
+                                              type="text"
+                                              autoFocus
+                                              value={newOcorrenciaTitle}
+                                              onChange={(e) => setNewOcorrenciaTitle(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                  handleCreateOcorrenciaInColumn(col.id);
+                                                } else if (e.key === "Escape") {
+                                                  setCreatingInColumn(null);
+                                                  setNewOcorrenciaTitle("");
+                                                }
+                                              }}
+                                              placeholder="Título da ocorrência..."
+                                              className="flex-1 px-3 py-2 border-2 border-[#4c010c] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] text-sm"
+                                            />
+                                            <button
+                                              onClick={() => handleCreateOcorrenciaInColumn(col.id)}
+                                              disabled={loadingOcorrencia}
+                                              className="p-2 bg-[#4c010c] text-white rounded-lg hover:bg-[#6a0110] transition-colors disabled:opacity-50"
+                                              title="Criar ocorrência"
+                                            >
+                                              <Send className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setCreatingInColumn(null);
+                                                setNewOcorrenciaTitle("");
+                                              }}
+                                              className="p-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                                              title="Cancelar"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => setCreatingInColumn(col.id)}
+                                            className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-[#4c010c] hover:text-[#4c010c] hover:bg-red-50 transition-all font-medium text-sm"
+                                          >
+                                            <Plus className="w-4 h-4" />
+                                            Adicionar Ocorrência
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </Droppable>
@@ -1367,7 +1438,7 @@ const KanbanBoard: React.FC = () => {
                                   setSelectedCard(card);
                                   setDetailOpen(true);
                                 }}
-                                className="p-2 hover:bg-white rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 hover:bg-white rounded-lg transition-colores opacity-0 group-hover:opacity-100"
                                 title="Ver detalhes"
                               >
                                 <Eye className="w-5 h-5 text-gray-500 hover:text-[#4c010c]" />
@@ -1439,6 +1510,19 @@ const KanbanBoard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 👇 NOVO: BOTÃO FLUTUANTE PARA CRIAR STATUS */}
+      <button
+        onClick={openCreateStatusModal}
+        className="fixed bottom-8 right-8 z-40 flex items-center justify-center w-14 h-14 bg-[#4c010c] text-white rounded-full shadow-2xl hover:bg-[#6a0110] hover:scale-110 transition-all duration-300 group"
+        title="Criar novo status"
+      >
+        <Plus className="w-6 h-6" />
+        <div className="absolute bottom-full right-0 mb-3 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap shadow-xl">
+          Criar novo status
+          <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+        </div>
+      </button>
     </div>
   );
 };

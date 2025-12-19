@@ -43,12 +43,12 @@ const Logs: React.FC = () => {
         listWorkflows().catch(() => []),
       ]);
 
-      // Criar caches
-      const newUsersCache = new Map(users.map((u: any) => [u.id, u]));
-      const newOcorrenciasCache = new Map(ocorrencias.map((o: Ocorrencia) => [o.id, o]));
-      const newStatusCache = new Map(status.map((s: any) => [s.id, s]));
-      const newSetoresCache = new Map(setores.map((s: any) => [s.id, s]));
-      const newWorkflowsCache = new Map(workflows.map((w: any) => [w.id, w]));
+      // ✅ CORRIGIDO: Type casting explícito
+      const newUsersCache = new Map<number, any>(users.map((u: any) => [u.id, u]));
+      const newOcorrenciasCache = new Map<number, Ocorrencia>(ocorrencias.map((o: Ocorrencia) => [o.id, o]));
+      const newStatusCache = new Map<number, any>(status.map((s: any) => [s.id, s]));
+      const newSetoresCache = new Map<number, any>(setores.map((s: any) => [s.id, s]));
+      const newWorkflowsCache = new Map<number, any>(workflows.map((w: any) => [w.id, w]));
 
       setUsersCache(newUsersCache);
       setOcorrenciasCache(newOcorrenciasCache);
@@ -122,11 +122,12 @@ const Logs: React.FC = () => {
             break;
 
           case "status":
-            const statusItem = newStatusCache.get(log.targetId);
+            // ✅ CORRIGIDO: Type assertion para statusItem
+            const statusItem = newStatusCache.get(log.targetId) as { nome?: string; chave?: string } | undefined;
             if (statusItem) {
               enriched.targetDetails = {
-                nome: statusItem.nome,
-                chave: statusItem.chave,
+                nome: statusItem.nome || 'N/A',
+                chave: statusItem.chave || 'N/A',
               };
             }
             break;

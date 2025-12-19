@@ -25,10 +25,18 @@ export interface UpdateStatusRequest {
 }
 
 // Lista todos os status ordenados
-export const listStatus = async (): Promise<Status[]> => {
-  const response = await api.get<Status[]>(ENDPOINTS.LIST_STATUS);
-  // Garantir ordenação por ordem
-  return response.data.sort((a, b) => a.ordem - b.ordem);
+export const listStatus = async (workflowId?: number) => {
+  // ✅ Se workflowId é passado, filtrar. Senão, retornar todos
+  const params = new URLSearchParams();
+  if (typeof workflowId === "number") {
+    params.append("workflowId", workflowId.toString());
+  }
+
+  const queryString = params.toString();
+  const url = queryString ? `/status?${queryString}` : "/status";
+
+  const response = await api.get(url);
+  return response.data;
 };
 
 // Cria novo status

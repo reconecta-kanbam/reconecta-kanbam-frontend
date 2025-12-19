@@ -16,18 +16,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateAuth = () => {
     const authenticated = isAuthenticated();
-    console.log("🔐 AuthContext: isAuthenticated =", authenticated);
     setAuth(authenticated);
   };
 
   useEffect(() => {
-    console.log("🔄 AuthContext: Inicializando...");
     updateAuth();
     setLoading(false);
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'access_token') {
-        console.log("🔄 AuthContext: Token mudou em outra aba");
         updateAuth();
       }
     };
@@ -40,7 +37,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const logout = () => {
-    console.log("🚪 AuthContext: Fazendo logout...");
     logoutUser();
     setAuth(false);
   };

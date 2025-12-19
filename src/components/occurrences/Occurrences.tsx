@@ -22,6 +22,7 @@ const Occurrences: React.FC = () => {
   
   useEffect(() => {
     loadOcorrencias();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadOcorrencias = async () => {

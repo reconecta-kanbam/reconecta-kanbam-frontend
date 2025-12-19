@@ -86,12 +86,11 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
     if (open) {
       loadInitialData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Preencher formulário ao editar
   useEffect(() => {
     if (ocorrencia) {
-      console.log("📋 Carregando dados da ocorrência para edição:", ocorrencia);
       setForm({
         titulo: ocorrencia.titulo,
         descricao: ocorrencia.descricao,
@@ -105,6 +104,7 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
     } else {
       resetForm();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ocorrencia]);
 
   const loadInitialData = async () => {
@@ -112,9 +112,10 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
       const [setoresData, statusData, usuariosData, workflowsData] =
         await Promise.all([
           getSectors(),
+          // ✅ CORRIGIDO: Não passar workflowId para listar TODOS os status
           listStatus(),
           listUsers(),
-          listWorkflows().catch(() => []), // Workflows pode dar 403 para alguns perfis
+          listWorkflows().catch(() => []),
         ]);
 
       setSetores(setoresData);
@@ -122,7 +123,6 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
       setUsuarios(usuariosData);
       setWorkflows(workflowsData);
 
-      // Setar primeiro setor como padrão se não estiver editando
       if (!ocorrencia && setoresData.length > 0 && form.setorId === 0) {
         setForm((prev) => ({ ...prev, setorId: setoresData[0].id }));
       }
@@ -170,7 +170,6 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
           workflowId: form.workflowId || null,
         };
 
-        console.log("📤 Payload de edição COMPLETO:", editPayload);
         
         await editOcorrencia(ocorrencia.id, editPayload);
         toast.success("Ocorrência atualizada com sucesso!");
@@ -188,7 +187,6 @@ const EditOccurrence: React.FC<EditOccurrenceProps> = ({
           descricaoExecucao: form.descricaoExecucao ?? "",
         };
 
-        console.log("📤 Payload de criação COMPLETO:", createPayload);
         
         await createOcorrencia(createPayload);
         toast.success("Ocorrência criada com sucesso!");

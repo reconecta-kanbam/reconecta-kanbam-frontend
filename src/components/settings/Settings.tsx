@@ -11,11 +11,13 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   updateMe,
   getCurrentUserFromToken,
+  changePassword, // ✅ ADICIONADO
   Colaborador,
 } from "../../api/services/usuario";
 import { getSectors } from "../../api/services/sectors";
@@ -35,6 +37,11 @@ const Settings: React.FC = () => {
   const [userData, setUserData] = useState<Colaborador | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // ✅ ADICIONADO: Estados para dialog de confirmação de senha
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -106,43 +113,46 @@ const Settings: React.FC = () => {
       return;
     }
 
-    if (formData.senha && formData.senha.length < 3) {
-      setError("A senha deve ter pelo menos 3 caracteres");
+    if (formData.senha && formData.senha.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
     try {
       setSaving(true);
 
-      // Montar payload apenas com campos alterados
-      const payload: any = {};
+      // ✅ CORRIGIDO: Separar atualização de perfil de alteração de senha
+      const profilePayload: any = {};
 
       if (formData.nome !== userData?.nome) {
-        payload.nome = formData.nome;
+        profilePayload.nome = formData.nome;
       }
 
       if (formData.email !== userData?.email) {
-        payload.email = formData.email;
-      }
-
-      if (formData.senha) {
-        payload.senha = formData.senha;
+        profilePayload.email = formData.email;
       }
 
       const currentSetorId = userData?.setor?.id || userData?.setorId || 0;
       if (formData.setorId !== currentSetorId && formData.setorId > 0) {
-        payload.setorId = formData.setorId;
+        profilePayload.setorId = formData.setorId;
       }
 
-      // Verificar se há algo para atualizar
-      if (Object.keys(payload).length === 0) {
-        setError("Nenhuma alteração detectada");
-        return;
+      console.log("📝 Payload do perfil:", profilePayload); // ✅ DEBUG
+
+      // Atualizar perfil se houver mudanças
+      if (Object.keys(profilePayload).length > 0) {
+        console.log("🔄 Atualizando perfil..."); // ✅ DEBUG
+        await updateMe(profilePayload);
+        console.log("✅ Perfil atualizado"); // ✅ DEBUG
       }
 
-      console.log("📤 Enviando atualização:", payload);
-
-      await updateMe(payload);
+      // ✅ CORRIGIDO: Se houver senha, abrir dialog
+      if (formData.senha) {
+        console.log("🔐 Abrindo dialog de confirmação de senha"); // ✅ DEBUG
+        setShowPasswordDialog(true);
+        setSaving(false); // ✅ IMPORTANTE: Parar loading aqui
+        return; // Não fechar ainda
+      }
 
       setSuccess("Perfil atualizado com sucesso!");
       toast.success("Perfil atualizado com sucesso!");
@@ -157,11 +167,76 @@ const Settings: React.FC = () => {
       // Recarregar dados
       await loadUserData();
     } catch (err: any) {
-      console.error("Erro ao atualizar perfil:", err);
+      console.error("❌ Erro ao atualizar perfil:", err);
       const errorMsg =
-        err.response?.data?.message || "Erro ao atualizar perfil";
+        err.response?.data?.message || err.message || "Erro ao atualizar perfil";
       setError(errorMsg);
       toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ✅ CORRIGIDO: Handler para confirmar senha e mudar
+  const handleConfirmPasswordChange = async () => {
+    if (!currentPasswordInput.trim()) {
+      setError("Digite sua senha atual");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(""); // ✅ Limpar erro anterior
+      console.log("🔐 Enviando alteração de senha..."); // ✅ DEBUG
+      
+      // ✅ CORRIGIDO: Usar changePassword que chama updateMe
+      await changePassword(currentPasswordInput, formData.senha);
+
+      console.log("✅ Senha alterada com sucesso"); // ✅ DEBUG
+
+      setSuccess("Senha alterada com sucesso!");
+      toast.success("Senha alterada com sucesso!");
+
+      // Limpar
+      setFormData((prev) => ({
+        ...prev,
+        senha: "",
+        confirmSenha: "",
+      }));
+      setCurrentPasswordInput("");
+      setShowPasswordDialog(false);
+
+      // Recarregar dados
+      await loadUserData();
+    } catch (err: any) {
+      console.error("❌ Erro ao alterar senha:", err);
+      
+      // ✅ CORRIGIDO: Extrair mensagem de erro corretamente
+      let errorMsg = "Erro ao alterar senha";
+      
+      // ✅ IMPORTANTE: Verificar se é erro de autenticação (401)
+      if (err.response?.status === 401) {
+        errorMsg = "Senha atual incorreta.";
+        // ✅ NÃO deslogar aqui, deixar o usuário tentar novamente
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setSaving(false);
+        return;
+      }
+
+      if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      console.log("❌ Erro recebido:", errorMsg); // ✅ DEBUG
+      
+      setError(errorMsg);
+      toast.error(errorMsg);
+      
+      // ✅ IMPORTANTE: NÃO fechar o dialog se houver erro
+      // Dialog continua aberto para o usuário tentar novamente
     } finally {
       setSaving(false);
     }
@@ -327,7 +402,7 @@ const Settings: React.FC = () => {
                 Alterar Senha
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                Deixe em branco se não quiser alterar a senha
+                Deixe em branco se não quiser alterar a senha. Mínimo 6 caracteres.
               </p>
 
               {/* Nova Senha */}
@@ -343,7 +418,7 @@ const Settings: React.FC = () => {
                       setFormData({ ...formData, senha: e.target.value })
                     }
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent transition-all pr-12"
-                    placeholder="Digite a nova senha"
+                    placeholder="Digite a nova senha (mínimo 6 caracteres)"
                   />
                   <button
                     type="button"
@@ -448,6 +523,128 @@ const Settings: React.FC = () => {
           </form>
         </div>
       </div>
+
+      {/* ✅ ADICIONADO: Dialog para confirmar senha antiga */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <Lock className="w-6 h-6 text-[#4c010c]" />
+                Confirmar Identidade
+              </h2>
+              <button
+                onClick={() => {
+                  // ✅ CORRIGIDO: Só permitir fechar se não estiver salvando
+                  if (!saving) {
+                    setShowPasswordDialog(false);
+                    setCurrentPasswordInput("");
+                    setError("");
+                  }
+                }}
+                disabled={saving}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Para alterar sua senha, confirme com sua senha atual:
+              </p>
+
+              <div className="relative">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Senha Atual *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={currentPasswordInput}
+                    onChange={(e) => {
+                      setCurrentPasswordInput(e.target.value);
+                      setError(""); // ✅ Limpar erro ao digitar
+                    }}
+                    placeholder="Digite sua senha atual"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all pr-12 ${
+                      error
+                        ? "border-red-500 focus:ring-red-500" // ✅ Destacar em vermelho se erro
+                        : "border-gray-200 focus:ring-[#4c010c]"
+                    }`}
+                    disabled={saving}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    disabled={saving}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* ✅ CORRIGIDO: Mostrar erro de forma mais clara */}
+              {error && (
+                <div className="flex items-start gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-red-800">Erro de Validação</p>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  // ✅ CORRIGIDO: Só permitir cancelar se não estiver salvando
+                  if (!saving) {
+                    setShowPasswordDialog(false);
+                    setCurrentPasswordInput("");
+                    setError("");
+                  }
+                }}
+                disabled={saving}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmPasswordChange}
+                // ✅ CORRIGIDO: Desabilitar botão se:
+                // 1. Estiver salvando
+                // 2. Campo de senha vazio
+                // 3. Houver erro (esperar usuário corrigir)
+                disabled={saving || !currentPasswordInput.trim() || !!error}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#4c010c] text-white rounded-xl hover:bg-[#3a0109] transition-all font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    Confirmar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

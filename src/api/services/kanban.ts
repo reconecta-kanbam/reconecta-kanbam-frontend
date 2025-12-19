@@ -1,87 +1,109 @@
 // src/api/services/kanban.ts
-import api from "../api";
-import { Column, Card, Status } from "../types/kanban";
-import { Ocorrencia } from "../types/ocorrencia";
-import { listStatus } from "./status";
-export interface KanbanFilters {
+import api from '../api';
+import type { Column } from '../types/kanban';
+import type { Ocorrencia } from '../types/ocorrencia';
+
+export const getKanbanData = async (filters?: {
   titulo?: string;
   setorId?: number;
-  colaboradorId?: number;
-  statusId?: number;
-  gestorId?: number;
-  workflowId?: number; // ✅ JÁ EXISTE
-}
-
-export const getKanbanData = async (filters?: KanbanFilters): Promise<Column[]> => {
+  status?: string;
+  workflowId?: number;
+  order?: string;
+}): Promise<Column[]> => {
   try {
-    console.log("📋 [KANBAN] Buscando status e ocorrências com filtros:", filters || {});
+    const params = new URLSearchParams();
+    if (filters?.titulo) params.append('titulo', filters.titulo);
+    if (filters?.setorId) params.append('setorId', filters.setorId.toString());
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.workflowId) params.append('workflowId', filters.workflowId.toString());
+    if (filters?.order) params.append('order', filters.order);
 
-    // 1. Buscar todos os status (se houver filtro de workflow, filtrar aqui)
-    const statusList = await listStatus();
+    const queryString = params.toString();
+    const ocorrenciasUrl = queryString ? `/ocorrencias?${queryString}` : '/ocorrencias';
 
-    if (!statusList || statusList.length === 0) {
-      console.warn("⚠️ Nenhum status encontrado no backend.");
-      return [];
-    }
+    // ✅ Buscar ocorrências E status do banco
+    const [ocorrenciasResponse, statusResponse] = await Promise.all([
+      api.get(ocorrenciasUrl),
+      api.get('/status'),
+    ]);
 
-    // 👇 FILTRAR STATUS POR WORKFLOW (se aplicável)
-    const filteredStatus = filters?.workflowId 
-      ? statusList.filter(s => s.workflowId === filters.workflowId)
-      : statusList;
+    const ocorrencias: Ocorrencia[] = ocorrenciasResponse.data;
+    const statusList = statusResponse.data;
 
-    console.log(`✅ [KANBAN] ${filteredStatus.length} status carregados (filtrados por workflow):`, filteredStatus);
+    console.log('📊 Ocorrências retornadas:', ocorrencias);
+    console.log('📋 Status retornados:', statusList);
 
-    // 2. Buscar ocorrências com filtros
-    const params: any = {};
-    if (filters?.titulo) params.titulo = filters.titulo;
-    if (filters?.setorId) params.setorId = filters.setorId;
-    if (filters?.colaboradorId) params.colaboradorId = filters.colaboradorId;
-    if (filters?.statusId) params.statusId = filters.statusId;
-    if (filters?.gestorId) params.gestorId = filters.gestorId;
-    if (filters?.workflowId) params.workflowId = filters.workflowId; // 👈 FILTRO DE WORKFLOW
+    // ✅ Criar mapa de colunas a partir dos status do banco
+    const columnsMap = new Map<number, Column>();
 
-    const ocorrenciasResponse = await api.get<Ocorrencia[]>("/ocorrencias", { params });
-    const ocorrencias = ocorrenciasResponse.data;
-
-    console.log(`✅ [KANBAN] ${ocorrencias.length} ocorrências carregadas.`);
-
-    // 3. Criar colunas baseadas nos status FILTRADOS
-    const columns: Column[] = filteredStatus.map((status) => {
-      const statusOcorrencias = ocorrencias.filter((occ) => {
-        if (!occ.status) return false;
-        return occ.status.id === status.id;
-      });
-
-      const cards: Card[] = statusOcorrencias.map((occ) => ({
-        id: String(occ.id),
-        titulo: occ.titulo,
-        descricao: occ.descricao,
-        colaboradorNome: occ.colaborador?.nome || "Não atribuído",
-        email: occ.colaborador?.email || "",
-        ocorrencia: occ,
-        createdAt: occ.createdAt,
-        statusId: status.id,
-        statusNome: status.nome,
-      }));
-
-      return {
-        id: status.chave,
+    // Primeiro, criar TODAS as colunas de status
+    statusList.forEach((status: any) => {
+      columnsMap.set(status.id, {
+        id: `status-${status.id}`,
         titulo: status.nome,
         statusId: status.id,
         statusChave: status.chave,
-        ordem: status.ordem,
-        workflowId: status.workflowId, // 👈 INCLUIR workflowId
-        cards,
-      };
+        ordem: status.ordem || status.id,
+        workflowId: status.workflowId || undefined,
+        cards: [],
+      });
     });
 
-    // 4. Ordenar colunas por ordem
-    const sortedColumns = columns.sort((a, b) => a.ordem - b.ordem);
+    // ✅ NOVO: Criar coluna "Sem Status" para ocorrências orfãs
+    columnsMap.set(0, {
+      id: 'sem_status',
+      titulo: 'Sem Status',
+      statusId: 0,
+      statusChave: 'sem_status',
+      ordem: 999,
+      workflowId: undefined,
+      cards: [],
+    });
 
-    console.log("📊 [KANBAN] Colunas geradas:", sortedColumns);
-    return sortedColumns;
+    // Depois, adicionar as ocorrências nas colunas
+    ocorrencias.forEach((occ) => {
+      const statusId = occ.status?.id;
+      
+      console.log(`🔍 Processando ocorrência ${occ.id}: status=${statusId}, statusNome=${occ.status?.nome}`);
+
+      // ✅ Se a ocorrência tem status, adicionar na coluna correspondente
+      if (statusId && columnsMap.has(statusId)) {
+        const column = columnsMap.get(statusId)!;
+        column.cards.push({
+          id: `card-${occ.id}`,
+          titulo: occ.titulo,
+          descricao: occ.descricao,
+          colaboradorNome: occ.colaborador?.nome,
+          createdAt: occ.createdAt,
+          statusId: statusId,
+          statusNome: occ.status?.nome || 'Sem Status',
+          ocorrencia: occ,
+        });
+        
+        console.log(`✅ Card ${occ.id} adicionado à coluna ${column.titulo}`);
+      } else {
+        // ✅ Adicionar na coluna "Sem Status"
+        const column = columnsMap.get(0)!;
+        column.cards.push({
+          id: `card-${occ.id}`,
+          titulo: occ.titulo,
+          descricao: occ.descricao,
+          colaboradorNome: occ.colaborador?.nome,
+          createdAt: occ.createdAt,
+          statusId: 0,
+          statusNome: 'Sem Status',
+          ocorrencia: occ,
+        });
+        
+        console.log(`✅ Card ${occ.id} adicionado à coluna "Sem Status"`);
+      }
+    });
+
+    const result = Array.from(columnsMap.values()).sort((a, b) => a.ordem - b.ordem);
+    console.log('✅ Colunas transformadas:', result);
+    return result;
   } catch (error) {
-    console.error("❌ [KANBAN] Erro ao buscar dados:", error);
+    console.error('Erro ao buscar dados do Kanban:', error);
     throw error;
   }
 };

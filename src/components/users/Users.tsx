@@ -275,7 +275,7 @@ const Users: React.FC = () => {
         user={selectedUser}
         currentUserPerfil={currentUserData?.perfil}
         onSuccess={() => {
-          loadUsers();
+          loadUsers(); // ✅ Recarregar usuários
           setIsEditModalOpen(false);
           setSelectedUser(null);
         }}
