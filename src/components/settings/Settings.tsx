@@ -16,8 +16,7 @@ import {
 import { toast } from "sonner";
 import {
   updateMe,
-  getCurrentUserFromToken,
-  changePassword, // ✅ ADICIONADO
+  changePassword,
   Colaborador,
 } from "../../api/services/usuario";
 import { getSectors } from "../../api/services/sectors";
@@ -38,7 +37,6 @@ const Settings: React.FC = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ✅ ADICIONADO: Estados para dialog de confirmação de senha
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [currentPasswordInput, setCurrentPasswordInput] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -60,16 +58,9 @@ const Settings: React.FC = () => {
       setLoading(true);
       setError("");
 
-      // Obter dados do token
-      const tokenData = getCurrentUserFromToken();
-      if (!tokenData) {
-        setError("Sessão expirada. Faça login novamente.");
-        return;
-      }
-
-      // Buscar dados completos do usuário
+      // Usar /users/me - funciona para TODOS os perfis (ADMIN, GESTOR, COLABORADOR)
       const [userResponse, setoresData] = await Promise.all([
-        api.get<Colaborador>(`/users/${tokenData.id}`),
+        api.get<Colaborador>("/users/me"),
         getSectors(),
       ]);
 
@@ -86,7 +77,11 @@ const Settings: React.FC = () => {
       });
     } catch (err: any) {
       console.error("Erro ao carregar dados:", err);
-      setError("Erro ao carregar dados do usuário. Tente novamente.");
+      if (err.response?.status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+      } else {
+        setError("Erro ao carregar dados do usuário. Tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
@@ -121,7 +116,6 @@ const Settings: React.FC = () => {
     try {
       setSaving(true);
 
-      // ✅ CORRIGIDO: Separar atualização de perfil de alteração de senha
       const profilePayload: any = {};
 
       if (formData.nome !== userData?.nome) {
@@ -137,21 +131,16 @@ const Settings: React.FC = () => {
         profilePayload.setorId = formData.setorId;
       }
 
-      console.log("📝 Payload do perfil:", profilePayload); // ✅ DEBUG
-
       // Atualizar perfil se houver mudanças
       if (Object.keys(profilePayload).length > 0) {
-        console.log("🔄 Atualizando perfil..."); // ✅ DEBUG
         await updateMe(profilePayload);
-        console.log("✅ Perfil atualizado"); // ✅ DEBUG
       }
 
-      // ✅ CORRIGIDO: Se houver senha, abrir dialog
+      // Se houver senha, abrir dialog para confirmar senha atual
       if (formData.senha) {
-        console.log("🔐 Abrindo dialog de confirmação de senha"); // ✅ DEBUG
         setShowPasswordDialog(true);
-        setSaving(false); // ✅ IMPORTANTE: Parar loading aqui
-        return; // Não fechar ainda
+        setSaving(false);
+        return;
       }
 
       setSuccess("Perfil atualizado com sucesso!");
@@ -167,9 +156,11 @@ const Settings: React.FC = () => {
       // Recarregar dados
       await loadUserData();
     } catch (err: any) {
-      console.error("❌ Erro ao atualizar perfil:", err);
+      console.error("Erro ao atualizar perfil:", err);
       const errorMsg =
-        err.response?.data?.message || err.message || "Erro ao atualizar perfil";
+        err.response?.data?.message ||
+        err.message ||
+        "Erro ao atualizar perfil";
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -177,7 +168,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  // ✅ CORRIGIDO: Handler para confirmar senha e mudar
   const handleConfirmPasswordChange = async () => {
     if (!currentPasswordInput.trim()) {
       setError("Digite sua senha atual");
@@ -186,13 +176,9 @@ const Settings: React.FC = () => {
 
     try {
       setSaving(true);
-      setError(""); // ✅ Limpar erro anterior
-      console.log("🔐 Enviando alteração de senha..."); // ✅ DEBUG
-      
-      // ✅ CORRIGIDO: Usar changePassword que chama updateMe
-      await changePassword(currentPasswordInput, formData.senha);
+      setError("");
 
-      console.log("✅ Senha alterada com sucesso"); // ✅ DEBUG
+      await changePassword(currentPasswordInput, formData.senha);
 
       setSuccess("Senha alterada com sucesso!");
       toast.success("Senha alterada com sucesso!");
@@ -209,15 +195,13 @@ const Settings: React.FC = () => {
       // Recarregar dados
       await loadUserData();
     } catch (err: any) {
-      console.error("❌ Erro ao alterar senha:", err);
-      
-      // ✅ CORRIGIDO: Extrair mensagem de erro corretamente
+      console.error("Erro ao alterar senha:", err);
+
       let errorMsg = "Erro ao alterar senha";
-      
-      // ✅ IMPORTANTE: Verificar se é erro de autenticação (401)
+
+      // Verificar se é erro de senha incorreta (401)
       if (err.response?.status === 401) {
         errorMsg = "Senha atual incorreta.";
-        // ✅ NÃO deslogar aqui, deixar o usuário tentar novamente
         setError(errorMsg);
         toast.error(errorMsg);
         setSaving(false);
@@ -229,14 +213,9 @@ const Settings: React.FC = () => {
       } else if (err.message) {
         errorMsg = err.message;
       }
-      
-      console.log("❌ Erro recebido:", errorMsg); // ✅ DEBUG
-      
+
       setError(errorMsg);
       toast.error(errorMsg);
-      
-      // ✅ IMPORTANTE: NÃO fechar o dialog se houver erro
-      // Dialog continua aberto para o usuário tentar novamente
     } finally {
       setSaving(false);
     }
@@ -402,7 +381,8 @@ const Settings: React.FC = () => {
                 Alterar Senha
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                Deixe em branco se não quiser alterar a senha. Mínimo 6 caracteres.
+                Deixe em branco se não quiser alterar a senha. Mínimo 6
+                caracteres.
               </p>
 
               {/* Nova Senha */}
@@ -524,7 +504,7 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* ✅ ADICIONADO: Dialog para confirmar senha antiga */}
+      {/* Dialog para confirmar senha antiga */}
       {showPasswordDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
@@ -536,7 +516,6 @@ const Settings: React.FC = () => {
               </h2>
               <button
                 onClick={() => {
-                  // ✅ CORRIGIDO: Só permitir fechar se não estiver salvando
                   if (!saving) {
                     setShowPasswordDialog(false);
                     setCurrentPasswordInput("");
@@ -566,12 +545,12 @@ const Settings: React.FC = () => {
                     value={currentPasswordInput}
                     onChange={(e) => {
                       setCurrentPasswordInput(e.target.value);
-                      setError(""); // ✅ Limpar erro ao digitar
+                      setError("");
                     }}
                     placeholder="Digite sua senha atual"
                     className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all pr-12 ${
                       error
-                        ? "border-red-500 focus:ring-red-500" // ✅ Destacar em vermelho se erro
+                        ? "border-red-500 focus:ring-red-500"
                         : "border-gray-200 focus:ring-[#4c010c]"
                     }`}
                     disabled={saving}
@@ -592,12 +571,14 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              {/* ✅ CORRIGIDO: Mostrar erro de forma mais clara */}
+              {/* Mostrar erro */}
               {error && (
                 <div className="flex items-start gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-red-800">Erro de Validação</p>
+                    <p className="font-semibold text-red-800">
+                      Erro de Validação
+                    </p>
                     <p className="text-sm text-red-700 mt-1">{error}</p>
                   </div>
                 </div>
@@ -608,7 +589,6 @@ const Settings: React.FC = () => {
             <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
               <button
                 onClick={() => {
-                  // ✅ CORRIGIDO: Só permitir cancelar se não estiver salvando
                   if (!saving) {
                     setShowPasswordDialog(false);
                     setCurrentPasswordInput("");
@@ -622,10 +602,6 @@ const Settings: React.FC = () => {
               </button>
               <button
                 onClick={handleConfirmPasswordChange}
-                // ✅ CORRIGIDO: Desabilitar botão se:
-                // 1. Estiver salvando
-                // 2. Campo de senha vazio
-                // 3. Houver erro (esperar usuário corrigir)
                 disabled={saving || !currentPasswordInput.trim() || !!error}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#4c010c] text-white rounded-xl hover:bg-[#3a0109] transition-all font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >

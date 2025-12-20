@@ -52,7 +52,8 @@ api.interceptors.response.use(
 
       // ✅ Apenas deslogar se for realmente sessão expirada
       console.log("🔴 Sessão expirada, deslogando...");
-      localStorage.removeItem("token");
+      localStorage.removeItem("access_token");
+      sessionStorage.removeItem("access_token");
       window.location.href = "/login";
       return Promise.reject(error);
     }
