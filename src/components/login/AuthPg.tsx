@@ -502,22 +502,31 @@ const AuthPg: React.FC = () => {
                     onChange={(e) => setTermsAgreed(e.target.checked)}
                     disabled={loading} 
                   />
-                  <span>
-                    Eu concordo com os{' '}
+                <span>
+                    Eu concordo com os
                     <button
                       type="button"
                       className="form-link-inline"
                       onClick={() => alert('Termos de uso')}
                       disabled={loading}
+                      style={{
+                        display: 'inline-block',
+                        whiteSpace: 'nowrap',
+                        margin: '0 8px', // 8px de espaço à esquerda e direita
+                      }}
                     >
                       Termos de uso
-                    </button>{' '}
-                    e{' '}
+                    </button>
+                    e{' '}{' '}
                     <button
                       type="button"
                       className="form-link-inline"
                       onClick={() => alert('Política de privacidade')}
                       disabled={loading}
+                      style={{
+                        display: 'inline-block',
+                        whiteSpace: 'nowrap',
+                      }}
                     >
                       Política de privacidade
                     </button>
