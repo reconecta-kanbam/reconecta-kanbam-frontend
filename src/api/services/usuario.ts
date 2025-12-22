@@ -142,11 +142,11 @@ export const updateMe = async (data: {
   senha?: string;
   setorId?: number;
 }) => {
-  console.log("📤 Enviando atualização para /users/me:", data); // ✅ DEBUG
+  //console.log("📤 Enviando atualização para /users/me:", data); // ✅ DEBUG
 
   const response = await api.patch("/users/me", data);
 
-  console.log("✅ Resposta recebida:", response.data); // ✅ DEBUG
+  //console.log("✅ Resposta recebida:", response.data); // ✅ DEBUG
   return response.data;
 };
 
@@ -167,7 +167,7 @@ export const getUser = async (userId: number): Promise<Colaborador> => {
 
 // ✅ CORRIGIDO: Função para alterar senha usando updateMe
 export const changePassword = async (senhaAtual: string, novaSenha: string) => {
-  console.log("📤 Enviando request para /users/me com senhaAtual e novaSenha"); // ✅ DEBUG
+  //console.log("📤 Enviando request para /users/me com senhaAtual e novaSenha"); // ✅ DEBUG
   
   try {
     const response = await api.patch('/users/me', {
@@ -175,7 +175,7 @@ export const changePassword = async (senhaAtual: string, novaSenha: string) => {
       senha: novaSenha,
     });
     
-    console.log("✅ Response recebido:", response.data); // ✅ DEBUG
+    //console.log("✅ Response recebido:", response.data); // ✅ DEBUG
     return response.data;
   } catch (error: any) {
     console.error("❌ Erro na request:", {

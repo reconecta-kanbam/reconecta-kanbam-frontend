@@ -87,7 +87,7 @@ const Workflows: React.FC = () => {
     try {
       const tokenData = getCurrentUserFromToken();
       if (!tokenData) {
-        console.error("Token não encontrado");
+         //console.error("Token não encontrado");
         return null;
       }
 
@@ -108,8 +108,8 @@ const Workflows: React.FC = () => {
       // ✅ CORREÇÃO: Usar parseWorkflowIds para converter corretamente
       const workflowIds = parseWorkflowIds(userData.workflowIds);
 
-      console.log("📊 DEBUG - workflowIds do banco:", userData.workflowIds);
-      console.log("📊 DEBUG - workflowIds parseado:", workflowIds);
+       //console.log("📊 DEBUG - workflowIds do banco:", userData.workflowIds);
+       //console.log("📊 DEBUG - workflowIds parseado:", workflowIds);
 
       return {
         id: userData.id,
@@ -118,7 +118,7 @@ const Workflows: React.FC = () => {
         workflowIds: workflowIds,
       };
     } catch (error) {
-      console.error("Erro ao carregar dados do usuário:", error);
+       //console.error("Erro ao carregar dados do usuário:", error);
       // Retornar dados básicos do token em caso de erro
       const tokenData = getCurrentUserFromToken();
       if (tokenData) {
@@ -137,7 +137,7 @@ const Workflows: React.FC = () => {
     try {
       setLoading(true);
       const data = await listWorkflows();
-      console.log("📊 DEBUG - Todos workflows:", data);
+       //console.log("📊 DEBUG - Todos workflows:", data);
       setWorkflows(data);
     } catch (error) {
       toast.error("Erro ao carregar workflows");
@@ -155,7 +155,7 @@ const Workflows: React.FC = () => {
 
     // ADMIN e GESTOR veem todos os workflows
     if (currentUser.perfil === "ADMIN" || currentUser.perfil === "GESTOR") {
-      console.log("👑 Admin/Gestor - mostrando todos os workflows");
+       //console.log("👑 Admin/Gestor - mostrando todos os workflows");
       setFilteredWorkflows(workflows);
       return;
     }
@@ -163,11 +163,11 @@ const Workflows: React.FC = () => {
     // COLABORADOR vê apenas os workflows que pertence
     const userWorkflowIds = currentUser.workflowIds;
 
-    console.log("👤 Colaborador - workflowIds:", userWorkflowIds);
-    console.log("👤 Colaborador - workflows disponíveis:", workflows.map((w) => w.id));
+     //console.log("👤 Colaborador - workflowIds:", userWorkflowIds);
+     //console.log("👤 Colaborador - workflows disponíveis:", workflows.map((w) => w.id));
 
     if (userWorkflowIds.length === 0) {
-      console.log("⚠️ Colaborador sem workflows vinculados");
+       //console.log("⚠️ Colaborador sem workflows vinculados");
       setFilteredWorkflows([]);
       return;
     }
@@ -176,14 +176,14 @@ const Workflows: React.FC = () => {
       userWorkflowIds.includes(workflow.id)
     );
 
-    console.log("✅ Workflows filtrados:", filtered);
+     //console.log("✅ Workflows filtrados:", filtered);
     setFilteredWorkflows(filtered);
   }, [currentUser, workflows]);
 
   useEffect(() => {
     const init = async () => {
       const user = await loadCurrentUser();
-      console.log("👤 Usuário carregado:", user);
+       //console.log("👤 Usuário carregado:", user);
       setCurrentUser(user);
       await loadWorkflows();
     };

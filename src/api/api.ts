@@ -46,12 +46,10 @@ api.interceptors.response.use(
       );
 
       if (isValidationError) {
-        console.log("⚠️ Erro de validação, mantendo sessão");
         return Promise.reject(error);
       }
 
       // ✅ Apenas deslogar se for realmente sessão expirada
-      console.log("🔴 Sessão expirada, deslogando...");
       localStorage.removeItem("access_token");
       sessionStorage.removeItem("access_token");
       window.location.href = "/login";

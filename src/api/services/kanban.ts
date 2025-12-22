@@ -30,8 +30,8 @@ export const getKanbanData = async (filters?: {
     const ocorrencias: Ocorrencia[] = ocorrenciasResponse.data;
     const statusList = statusResponse.data;
 
-    console.log('📊 Ocorrências retornadas:', ocorrencias);
-    console.log('📋 Status retornados:', statusList);
+    // console.log('📊 Ocorrências retornadas:', ocorrencias);
+    // console.log('📋 Status retornados:', statusList);
 
     // ✅ Criar mapa de colunas a partir dos status do banco
     const columnsMap = new Map<number, Column>();
@@ -64,8 +64,6 @@ export const getKanbanData = async (filters?: {
     ocorrencias.forEach((occ) => {
       const statusId = occ.status?.id;
       
-      console.log(`🔍 Processando ocorrência ${occ.id}: status=${statusId}, statusNome=${occ.status?.nome}`);
-
       // ✅ Se a ocorrência tem status, adicionar na coluna correspondente
       if (statusId && columnsMap.has(statusId)) {
         const column = columnsMap.get(statusId)!;
@@ -80,7 +78,6 @@ export const getKanbanData = async (filters?: {
           ocorrencia: occ,
         });
         
-        console.log(`✅ Card ${occ.id} adicionado à coluna ${column.titulo}`);
       } else {
         // ✅ Adicionar na coluna "Sem Status"
         const column = columnsMap.get(0)!;
@@ -95,12 +92,10 @@ export const getKanbanData = async (filters?: {
           ocorrencia: occ,
         });
         
-        console.log(`✅ Card ${occ.id} adicionado à coluna "Sem Status"`);
       }
     });
 
     const result = Array.from(columnsMap.values()).sort((a, b) => a.ordem - b.ordem);
-    console.log('✅ Colunas transformadas:', result);
     return result;
   } catch (error) {
     console.error('Erro ao buscar dados do Kanban:', error);

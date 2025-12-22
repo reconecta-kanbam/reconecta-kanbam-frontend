@@ -71,7 +71,7 @@ const KanbanBoard: React.FC = () => {
   // Estados de Usuários Online
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
-  const [activeWorkflowId, setActiveWorkflowId] = useState<number | null>(initialWorkflowId); // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [activeWorkflowId] = useState<number | null>(initialWorkflowId);
 
   // Estados de notificação e confirmação
   const [notification, setNotification] = useState<{
