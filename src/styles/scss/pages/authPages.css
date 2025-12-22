@@ -452,3 +452,10 @@
     margin-top: 2rem;
   }
 }*/
+
+@media (max-width: 768px) {
+
+  .auth-left {
+    display: none;
+  }
+}

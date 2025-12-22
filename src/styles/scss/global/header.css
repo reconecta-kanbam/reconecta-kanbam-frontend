@@ -70,6 +70,17 @@
   color: var(--yellow-color-secondary);
 }
 
+@media (max-width: 1024px) {  
+  .nav__menu__list__item__link { 
+    text-align: left;
+  }
+
+  .nav__menu__list__item__link--open {
+    left: 0;
+    right: inherit;
+  }
+}
+
 /* Responsive Styles */
 @media (max-width: 590px) {
   .hamburger-menu {
@@ -113,3 +124,5 @@
     margin: 0;
   }
 }
+
+
