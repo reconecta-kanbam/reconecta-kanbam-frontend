@@ -455,7 +455,7 @@ const AuthPg: React.FC = () => {
                 />
               </div>
 
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label className="form-label">
                   <i className="bx bx-user-check"></i> Perfil
                 </label>
@@ -470,7 +470,7 @@ const AuthPg: React.FC = () => {
                   <option value="GESTOR">Gestor</option>
                   <option value="ADMIN">Admin</option>
                 </select>
-              </div>
+              </div> */}
 
               <div className="form-group">
                 <label className="form-label">
@@ -512,7 +512,7 @@ const AuthPg: React.FC = () => {
                       style={{
                         display: 'inline-block',
                         whiteSpace: 'nowrap',
-                        margin: '0 8px', // 8px de espaço à esquerda e direita
+                        margin: '0 8px', 
                       }}
                     >
                       Termos de uso
