@@ -1,6 +1,6 @@
 // src/components/TaskDetailDialog.tsx
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Plus, CheckCircle2, Layers, Calendar, User, UserPlus, Trash2, Edit2, Save, XCircle } from "lucide-react";
+import { X, Plus, CheckCircle2, Layers, Calendar, User, UserPlus, Trash2, Edit2, Save, XCircle, Building2 } from "lucide-react";
 import type React from "react";
 import type { Ocorrencia } from "../../../api/types/ocorrencia";
 import { useState, useEffect } from "react";
@@ -73,7 +73,6 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       try {
         const [userData, statusData] = await Promise.all([
           listUsers(),
-          // ✅ CORRIGIDO: Não passar workflowId para listar TODOS os status
           listStatus()
         ]);
         setUsers(userData);
@@ -166,7 +165,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   };
 
   const handleDeleteSubtask = async (subtarefaId: number) => {
-    const confirmDelete = window.confirm("Tem certeza que deseja deletar esta subtarefa? Esta ação não pode ser desfeita.");
+    const confirmDelete = window.confirm("Tem certeza que deseja deletar esta subtarefa?");
     if (!confirmDelete) return;
 
     setDeletingSubtask(subtarefaId);
@@ -176,11 +175,10 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       const updatedSubtarefas = (localOcorrencia.subtarefas || []).filter(s => s.id !== subtarefaId);
       updateLocalAndParent({ subtarefas: updatedSubtarefas });
       
-      toast.success("Subtarefa deletada com sucesso!");
+      toast.success("Subtarefa deletada!");
     } catch (error: any) {
       console.error("Erro ao deletar subtarefa:", error);
-      const message = error.response?.data?.message || error.message || "Erro interno do servidor.";
-      toast.error(`Erro ao deletar subtarefa: ${message}`);
+      toast.error("Erro ao deletar subtarefa.");
     } finally {
       setDeletingSubtask(null);
     }
@@ -218,7 +216,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       );
       updateLocalAndParent({ subtarefas: updatedSubtarefas });
       
-      toast.success("Subtarefa atualizada com sucesso!");
+      toast.success("Subtarefa atualizada!");
       setEditingSubtask(null);
     } catch (error) {
       console.error("Erro ao editar subtarefa:", error);
@@ -236,7 +234,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       setSelectedStatusId(newStatusId);
       updateLocalAndParent({ status: updatedOcorrencia.status });
       
-      toast.success("Status atualizado com sucesso!");
+      toast.success("Status atualizado!");
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error("Erro ao atualizar status.");
@@ -248,325 +246,345 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />
-        <Dialog.Content className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-xl p-6 overflow-y-auto z-50 rounded-l-2xl">
-          <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-3">
-            <Dialog.Title className="text-2xl font-bold text-gray-900">
-              Detalhes da Ocorrência
-            </Dialog.Title>
-            <Dialog.Close className="text-gray-400 hover:text-gray-700 transition-colors">
-              <X size={24} />
-            </Dialog.Close>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+        <Dialog.Content className="fixed right-0 top-0 h-full w-full max-w-[480px] bg-gray-50 shadow-2xl overflow-hidden z-50 flex flex-col">
+          {/* Header Fixo */}
+          <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <Dialog.Title className="text-xl font-bold text-gray-900 truncate">
+                  Detalhes da Ocorrência
+                </Dialog.Title>
+                <p className="text-sm text-gray-500 mt-0.5">#{localOcorrencia.id}</p>
+              </div>
+              <Dialog.Close className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
+                <X size={20} />
+              </Dialog.Close>
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-[#4c010c] p-4 rounded-xl text-white">
-              <h3 className="font-bold text-lg">{localOcorrencia.titulo}</h3>
-              <p className="text-sm mt-1 text-white">{localOcorrencia.descricao}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Status</span>
-                </div>
-                <p className="text-green-900 font-medium">{localOcorrencia.status?.nome || "Não definido"}</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
-                <div className="flex items-center gap-2 mb-1">
-                  <Layers className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Setor</span>
-                </div>
-                <p className="text-purple-900 font-medium">{localOcorrencia.setor?.nome || "Não definido"}</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-[#ffffa6] to-yellow-100 p-4 rounded-xl border border-yellow-300">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="w-4 h-4 text-yellow-800" />
-                  <span className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Criado em</span>
-                </div>
-                <p className="text-yellow-900 font-medium text-sm">
-                  {new Date(localOcorrencia.createdAt).toLocaleDateString("pt-BR")}
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-[#4c010c]" />
-                Atualizar Status
-              </h3>
-              <select
-                value={selectedStatusId || ""}
-                onChange={(e) => handleStatusChange(Number(e.target.value))}
-                disabled={updatingStatus || loadingUsers}
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
-              >
-                <option value="">Selecione um status</option>
-                {statuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.nome}
-                  </option>
-                ))}
-              </select>
-              {updatingStatus && (
-                <p className="text-sm text-gray-500 mt-2">Atualizando status...</p>
-              )}
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <User className="w-5 h-5 text-[#4c010c]" />
-                Atribuição
-              </h3>
-
-              <div className="mb-4 p-4 bg-gray-50 rounded-xl">
-                <p className="text-sm font-medium text-gray-600 mb-1">Colaborador Atual:</p>
-                {localOcorrencia.colaborador ? (
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#4c010c]" />
-                    <span className="font-semibold">{localOcorrencia.colaborador.nome}</span>
-                    <span className="text-sm text-gray-500">({localOcorrencia.colaborador.email})</span>
-                  </div>
-                ) : (
-                  <span className="text-gray-500 italic">Não atribuído</span>
+          {/* Conteúdo Scrollável */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-5">
+              
+              {/* Título e Descrição */}
+              <div className="bg-[#4c010c] p-5 rounded-xl text-white">
+                <h3 className="font-bold text-lg leading-tight break-words">{localOcorrencia.titulo}</h3>
+                {localOcorrencia.descricao && (
+                  <p className="text-sm mt-2 text-white/90 leading-relaxed break-words">{localOcorrencia.descricao}</p>
                 )}
               </div>
 
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAutoAssign();
-                  }}
-                  disabled={autoAssigning}
-                  className="w-full flex items-center justify-center gap-2 bg-[#4c010c] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#6b0115] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  {autoAssigning ? "Atribuindo..." : "Auto-atribuir para mim"}
-                </button>
-              </div>
-
+              {/* Info Cards - Layout Vertical */}
               <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-600">Ou atribuir para outro colaborador:</p>
-                <select
-                  value={selectedUserId || ""}
-                  onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
-                  disabled={loadingUsers}
-                >
-                  <option value="">
-                    {loadingUsers ? "Carregando..." : "Selecione um colaborador"}
-                  </option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.nome} ({user.email})
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={handleAssignUser}
-                  disabled={!selectedUserId || assigningUser}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  {assigningUser ? "Atribuindo..." : "Atribuir Colaborador"}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-5 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-[#4c010c] p-2 rounded-lg">
-                      <Layers className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">Subtarefas</h3>
-                      <p className="text-xs text-gray-600">Gerencie as etapas desta ocorrência</p>
-                    </div>
-                  </div>
-                  <div className="bg-[#4c010c] text-white px-3 py-1.5 rounded-full">
-                    <span className="text-sm font-bold">{localOcorrencia.subtarefas?.length || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5">
-                <div className="space-y-3 max-h-[400px] overflow-y-auto mb-5">
-                  {!localOcorrencia.subtarefas || localOcorrencia.subtarefas.length === 0 ? (
-                    <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                      <Layers className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 text-sm font-medium">Nenhuma subtarefa criada</p>
-                      <p className="text-gray-400 text-xs mt-1">Crie subtarefas para organizar melhor o trabalho</p>
-                    </div>
-                  ) : (
-                    localOcorrencia.subtarefas.map((subtask) => (
-                      <div
-                        key={subtask.id}
-                        className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-gray-300 transition-all group"
-                      >
-                        {editingSubtask === subtask.id ? (
-                          <div className="space-y-3">
-                            <input
-                              type="text"
-                              value={editSubtaskData.titulo}
-                              onChange={(e) => setEditSubtaskData({ ...editSubtaskData, titulo: e.target.value })}
-                              className="w-full p-2 border-2 border-[#4c010c] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c]"
-                              placeholder="Título"
-                            />
-                            <textarea
-                              value={editSubtaskData.descricao}
-                              onChange={(e) => setEditSubtaskData({ ...editSubtaskData, descricao: e.target.value })}
-                              className="w-full p-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] resize-none"
-                              rows={2}
-                              placeholder="Descrição"
-                            />
-                            <select
-                              value={editSubtaskData.responsavelId || ""}
-                              onChange={(e) => setEditSubtaskData({ 
-                                ...editSubtaskData, 
-                                responsavelId: e.target.value ? Number(e.target.value) : null 
-                              })}
-                              className="w-full p-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c]"
-                            >
-                              <option value="">Sem responsável</option>
-                              {users.map((user) => (
-                                <option key={user.id} value={user.id}>
-                                  {user.nome}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => saveEditSubtask(subtask.id)}
-                                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                              >
-                                <Save className="w-4 h-4" />
-                                Salvar
-                              </button>
-                              <button
-                                onClick={cancelEditSubtask}
-                                className="flex-1 flex items-center justify-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-colors font-semibold"
-                              >
-                                <XCircle className="w-4 h-4" />
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="font-bold text-gray-900 flex-1">{subtask.titulo}</h4>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => startEditSubtask(subtask)}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Editar"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSubtask(subtask.id)}
-                                  disabled={deletingSubtask === subtask.id}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                  title="Deletar"
-                                >
-                                  {deletingSubtask === subtask.id ? (
-                                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {subtask.descricao && (
-                              <p className="text-sm text-gray-600 mb-2">{subtask.descricao}</p>
-                            )}
-                            
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {subtask.responsavel && (
-                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-lg text-xs font-semibold">
-                                  <User className="w-3 h-3" />
-                                  {subtask.responsavel.nome}
-                                </span>
-                              )}
-                              <span className="inline-flex items-center gap-1 bg-gray-200 text-gray-700 px-2 py-1 rounded-lg text-xs font-semibold">
-                                <Calendar className="w-3 h-3" />
-                                {new Date(subtask.createdAt).toLocaleDateString("pt-BR")}
-                              </span>
-                            </div>
-                          </>
-                        )}
+                {/* Status */}
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
                       </div>
-                    ))
-                  )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</p>
+                        <p className="font-semibold text-gray-900 truncate">{localOcorrencia.status?.nome || "Não definido"}</p>
+                      </div>
+                    </div>
+                    <select
+                      value={selectedStatusId || ""}
+                      onChange={(e) => handleStatusChange(Number(e.target.value))}
+                      disabled={updatingStatus || loadingUsers}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4c010c] focus:border-transparent bg-white min-w-[140px]"
+                    >
+                      <option value="">Alterar...</option>
+                      {statuses.map((status) => (
+                        <option key={status.id} value={status.id}>
+                          {status.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-red-50 to-rose-50 p-5 rounded-xl border-2 border-[#4c010c]/30 shadow-sm">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Plus className="w-5 h-5 text-[#4c010c]" />
-                    <h3 className="text-base font-bold text-gray-900">Adicionar Nova Subtarefa</h3>
+                {/* Setor e Data */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Setor</p>
+                        <p className="font-semibold text-gray-900 truncate" title={localOcorrencia.setor?.nome}>
+                          {localOcorrencia.setor?.nome || "—"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      placeholder="Título da subtarefa *"
-                      className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
-                      value={newSubtask.titulo}
-                      onChange={(e) => setNewSubtask({ ...newSubtask, titulo: e.target.value })}
-                    />
-                    <textarea
-                      placeholder="Descrição (opcional)"
-                      className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent resize-none"
-                      rows={2}
-                      value={newSubtask.descricao}
-                      onChange={(e) => setNewSubtask({ ...newSubtask, descricao: e.target.value })}
-                    />
+
+                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Criado</p>
+                        <p className="font-semibold text-gray-900">
+                          {new Date(localOcorrencia.createdAt).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Atribuição */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-[#4c010c]" />
+                    <h3 className="font-bold text-gray-900">Atribuição</h3>
+                  </div>
+                </div>
+                
+                <div className="p-5 space-y-4">
+                  {/* Colaborador Atual */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Colaborador Atual</p>
+                    {localOcorrencia.colaborador ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#4c010c] rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-sm">
+                            {localOcorrencia.colaborador.nome.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-gray-900 truncate" title={localOcorrencia.colaborador.nome}>
+                            {localOcorrencia.colaborador.nome}
+                          </p>
+                          <p className="text-sm text-gray-500 truncate" title={localOcorrencia.colaborador.email}>
+                            {localOcorrencia.colaborador.email}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 italic">Não atribuído</p>
+                    )}
+                  </div>
+
+                  {/* Auto-atribuir */}
+                  <button
+                    type="button"
+                    onClick={handleAutoAssign}
+                    disabled={autoAssigning}
+                    className="w-full flex items-center justify-center gap-2 bg-[#4c010c] text-white px-4 py-3 rounded-lg font-semibold hover:bg-[#6b0115] transition-colors disabled:opacity-50"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    {autoAssigning ? "Atribuindo..." : "Auto-atribuir para mim"}
+                  </button>
+
+                  {/* Atribuir Manual */}
+                  <div className="flex gap-2">
                     <select
-                      value={newSubtask.responsavelId || ""}
-                      onChange={(e) => setNewSubtask({ 
-                        ...newSubtask, 
-                        responsavelId: e.target.value ? Number(e.target.value) : null 
-                      })}
-                      className="w-full p-3 border-2 border-[#4c010c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
+                      value={selectedUserId || ""}
+                      onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+                      className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4c010c] focus:border-transparent text-sm"
                       disabled={loadingUsers}
                     >
-                      <option value="">
-                        {loadingUsers ? "Carregando..." : "Atribuir responsável (opcional)"}
-                      </option>
+                      <option value="">{loadingUsers ? "Carregando..." : "Selecionar colaborador..."}</option>
                       {users.map((user) => (
                         <option key={user.id} value={user.id}>
-                          {user.nome} ({user.perfil})
+                          {user.nome}
                         </option>
                       ))}
                     </select>
                     <button
-                      onClick={handleAddSubtask}
-                      disabled={!newSubtask.titulo.trim() || addingSubtask}
-                      className="w-full bg-[#4c010c] text-white px-4 py-3 rounded-lg hover:bg-[#3a0109] transition-all font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleAssignUser}
+                      disabled={!selectedUserId || assigningUser}
+                      className="px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex-shrink-0"
                     >
-                      {addingSubtask ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-5 h-5" />
-                          Criar Subtarefa
-                        </>
-                      )}
+                      <UserPlus className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
               </div>
+
+              {/* Subtarefas */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-[#4c010c]" />
+                    <h3 className="font-bold text-gray-900">Subtarefas</h3>
+                  </div>
+                  <span className="bg-[#4c010c] text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                    {localOcorrencia.subtarefas?.length || 0}
+                  </span>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  {/* Lista de Subtarefas */}
+                  {(!localOcorrencia.subtarefas || localOcorrencia.subtarefas.length === 0) ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                      <Layers className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">Nenhuma subtarefa</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                      {localOcorrencia.subtarefas.map((subtask) => (
+                        <div
+                          key={subtask.id}
+                          className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors group"
+                        >
+                          {editingSubtask === subtask.id ? (
+                            <div className="space-y-3">
+                              <input
+                                type="text"
+                                value={editSubtaskData.titulo}
+                                onChange={(e) => setEditSubtaskData({ ...editSubtaskData, titulo: e.target.value })}
+                                className="w-full p-2.5 border-2 border-[#4c010c] rounded-lg text-sm"
+                                placeholder="Título"
+                              />
+                              <textarea
+                                value={editSubtaskData.descricao}
+                                onChange={(e) => setEditSubtaskData({ ...editSubtaskData, descricao: e.target.value })}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm resize-none"
+                                rows={2}
+                                placeholder="Descrição"
+                              />
+                              <select
+                                value={editSubtaskData.responsavelId || ""}
+                                onChange={(e) => setEditSubtaskData({ 
+                                  ...editSubtaskData, 
+                                  responsavelId: e.target.value ? Number(e.target.value) : null 
+                                })}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm"
+                              >
+                                <option value="">Sem responsável</option>
+                                {users.map((user) => (
+                                  <option key={user.id} value={user.id}>{user.nome}</option>
+                                ))}
+                              </select>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveEditSubtask(subtask.id)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700"
+                                >
+                                  <Save className="w-4 h-4" /> Salvar
+                                </button>
+                                <button
+                                  onClick={cancelEditSubtask}
+                                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-600"
+                                >
+                                  <XCircle className="w-4 h-4" /> Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-semibold text-gray-900 text-sm break-words flex-1">{subtask.titulo}</h4>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                  <button
+                                    onClick={() => startEditSubtask(subtask)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-100 rounded"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSubtask(subtask.id)}
+                                    disabled={deletingSubtask === subtask.id}
+                                    className="p-1.5 text-red-600 hover:bg-red-100 rounded disabled:opacity-50"
+                                  >
+                                    {deletingSubtask === subtask.id ? (
+                                      <div className="w-3.5 h-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {subtask.descricao && (
+                                <p className="text-xs text-gray-600 mt-1 break-words">{subtask.descricao}</p>
+                              )}
+                              
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {subtask.responsavel && (
+                                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
+                                    <User className="w-3 h-3" />
+                                    <span className="truncate max-w-[100px]" title={subtask.responsavel.nome}>
+                                      {subtask.responsavel.nome.split(' ')[0]}
+                                    </span>
+                                  </span>
+                                )}
+                                <span className="inline-flex items-center gap-1 bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(subtask.createdAt).toLocaleDateString("pt-BR")}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Nova Subtarefa */}
+                  <div className="bg-[#4c010c]/5 p-4 rounded-lg border border-[#4c010c]/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Plus className="w-4 h-4 text-[#4c010c]" />
+                      <span className="text-sm font-semibold text-gray-900">Nova Subtarefa</span>
+                    </div>
+                    <div className="space-y-2.5">
+                      <input
+                        type="text"
+                        placeholder="Título *"
+                        className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
+                        value={newSubtask.titulo}
+                        onChange={(e) => setNewSubtask({ ...newSubtask, titulo: e.target.value })}
+                      />
+                      <textarea
+                        placeholder="Descrição (opcional)"
+                        className="w-full p-2.5 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
+                        rows={2}
+                        value={newSubtask.descricao}
+                        onChange={(e) => setNewSubtask({ ...newSubtask, descricao: e.target.value })}
+                      />
+                      <select
+                        value={newSubtask.responsavelId || ""}
+                        onChange={(e) => setNewSubtask({ 
+                          ...newSubtask, 
+                          responsavelId: e.target.value ? Number(e.target.value) : null 
+                        })}
+                        className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#4c010c] focus:border-transparent"
+                        disabled={loadingUsers}
+                      >
+                        <option value="">Responsável (opcional)</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.id}>{user.nome}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleAddSubtask}
+                        disabled={!newSubtask.titulo.trim() || addingSubtask}
+                        className="w-full bg-[#4c010c] text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-[#3a0109] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                      >
+                        {addingSubtask ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Criar Subtarefa
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </Dialog.Content>

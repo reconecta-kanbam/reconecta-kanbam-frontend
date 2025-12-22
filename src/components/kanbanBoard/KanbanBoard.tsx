@@ -241,6 +241,51 @@ const KanbanBoard: React.FC = () => {
     }
   };
 
+  // ✅ NOVO: Handler para atualização de ocorrência via TaskDetailDialog
+  const handleOcorrenciaUpdate = (updatedOcorrencia: any) => {
+    setColumns((prevColumns) => {
+      // Remove o card de todas as colunas
+      const newColumns = prevColumns.map(col => ({
+        ...col,
+        cards: col.cards.filter(card => card.ocorrencia?.id !== updatedOcorrencia.id)
+      }));
+      
+      // Encontra a coluna de destino pelo novo status
+      const targetColumnIndex = newColumns.findIndex(
+        col => col.statusId === updatedOcorrencia.status?.id
+      );
+      
+      if (targetColumnIndex !== -1 && selectedCard) {
+        // Cria o card atualizado
+        const updatedCard: Card = {
+          ...selectedCard,
+          id: String(updatedOcorrencia.id),
+          titulo: updatedOcorrencia.titulo,
+          descricao: updatedOcorrencia.descricao,
+          statusId: updatedOcorrencia.status?.id,
+          statusNome: updatedOcorrencia.status?.nome,
+          colaboradorNome: updatedOcorrencia.colaborador?.nome,
+          ocorrencia: updatedOcorrencia,
+        };
+        
+        newColumns[targetColumnIndex].cards.push(updatedCard);
+      }
+      
+      return newColumns;
+    });
+    
+    // Atualiza o card selecionado
+    setSelectedCard(prev => prev ? {
+      ...prev,
+      ocorrencia: updatedOcorrencia,
+      statusId: updatedOcorrencia.status?.id,
+      statusNome: updatedOcorrencia.status?.nome,
+      colaboradorNome: updatedOcorrencia.colaborador?.nome,
+    } : null);
+    
+    showNotification(`Status atualizado para "${updatedOcorrencia.status?.nome}"!`, "success");
+  };
+
   // ==================== HANDLERS DE STATUS ====================
 
   const generateChaveFromNome = (nome: string): string => {
@@ -1486,7 +1531,7 @@ const KanbanBoard: React.FC = () => {
         </>
       )}
 
-      {/* DIALOG DE DETALHES */}
+      {/* ✅ DIALOG DE DETALHES - COM onUpdate PARA ATUALIZAÇÃO AUTOMÁTICA */}
       {selectedCard?.ocorrencia && (
         <TaskDetailDialog
           open={detailOpen}
@@ -1494,6 +1539,7 @@ const KanbanBoard: React.FC = () => {
           ocorrencia={selectedCard.ocorrencia}
           onAssign={handleAssignOcorrencia}
           onAutoAssign={handleAutoAssignOcorrencia}
+          onUpdate={handleOcorrenciaUpdate}
         />
       )}
 
